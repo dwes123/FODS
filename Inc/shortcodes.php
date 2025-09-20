@@ -957,7 +957,13 @@ function display_league_activity_feed_shortcode() {
         'post_type'      => 'trade_proposal',
         'posts_per_page' => 10, // Show the 10 most recent
         'meta_key'       => 'trade_status',
-        'meta_value'     => 'accepted', // Only show completed trades
+        'meta_value'     => 'accepted', // Only show completed trades,
+        'date_query'        => array(
+            array(
+                'after'     => '48 hours ago',
+                'inclusive' => true,
+            ),
+        ),
     );
     $trade_query = new WP_Query($trade_args);
 
