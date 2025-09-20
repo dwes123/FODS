@@ -949,42 +949,112 @@ function display_waiver_wire_shortcode() {
 
 add_shortcode('waiver_wire_list', 'display_waiver_wire_shortcode');
 
+function get_recent_league_activity() {
+    $activities = [];
+
+    // 1. Get Trades
+    $trade_args = array(
+        'post_type'      => 'trade_proposal',
+        'posts_per_page' => 20,
+        'meta_key'       => 'trade_status',
+        'meta_value'     => 'accepted',
+        'date_query'     => array(
+            array('after' => '48 hours ago', 'inclusive' => true),
+        ),
+        'orderby'        => 'date',
+        'order'          => 'DESC',
+    );
+    $trade_query = new WP_Query($trade_args);
+    if ($trade_query->have_posts()) {
+        while ($trade_query->have_posts()) {
+            $trade_query->the_post();
+            $proposer_id = get_field('proposing_manager');
+            $target_id   = get_field('target_manager');
+            $proposer    = get_userdata($proposer_id);
+            $target      = get_userdata($target_id);
+            if ($proposer && $target) {
+                $activities[] = array(
+                    'timestamp' => get_the_time('U'),
+                    'type'      => 'Trade',
+                    'text'      => 'A trade was completed between <strong>' . esc_html($proposer->display_name) . '</strong> and <strong>' . esc_html($target->display_name) . '</strong>.',
+                );
+            }
+        }
+    }
+    wp_reset_postdata();
+
+    // 2. Get Signings and Waiver Claims from Player Meta
+    $player_args = array(
+        'post_type'      => 'playerdata',
+        'posts_per_page' => 50,
+        'date_query'     => array(
+            array('after' => '48 hours ago', 'inclusive' => true, 'column' => 'post_modified'),
+        ),
+        'orderby'        => 'modified',
+        'order'          => 'DESC',
+    );
+    $player_query = new WP_Query($player_args);
+    if ($player_query->have_posts() && function_exists('get_field')) {
+        while ($player_query->have_posts()) {
+            $player_query->the_post();
+            $player_id   = get_the_ID();
+            $player_name = get_the_title();
+            $team_id     = get_field('fantasy_team_id', $player_id);
+            $fa_status   = get_field('fa_status', $player_id);
+
+            // Check for a recent signing or claim
+            if ($fa_status === 'rostered' && !empty($team_id)) {
+                $modified_time = get_the_modified_time('U');
+                $time_diff = time() - $modified_time;
+
+                if ($time_diff < (48 * HOUR_IN_SECONDS)) {
+                     // To differentiate between a simple update and a new acquisition,
+                     // we could check if the fantasy_team_id was empty before this.
+                     // A more robust way is to log the transaction type.
+                     // For now, we assume a recent modification to a rostered player is a signing/claim.
+                     // We will need to add more specific logging to be more accurate.
+                    $activities[] = array(
+                        'timestamp' => $modified_time,
+                        'type'      => 'Acquisition',
+                        'text'      => '<strong>' . esc_html($player_name) . '</strong> was acquired by <strong>' . esc_html($team_id) . '</strong>.',
+                    );
+                }
+            }
+        }
+    }
+    wp_reset_postdata();
+
+
+    // Sort all activities by timestamp
+    usort($activities, function($a, $b) {
+        return $b['timestamp'] <=> $a['timestamp'];
+    });
+
+    return $activities;
+}
+
+
 /* ------------------------------------------------------------------------
    [league_activity_feed] — Shows recent league transactions
 ------------------------------------------------------------------------ */
 function display_league_activity_feed_shortcode() {
-    $trade_args = array(
-        'post_type'      => 'trade_proposal',
-        'posts_per_page' => 10, // Show the 10 most recent
-        'meta_key'       => 'trade_status',
-        'meta_value'     => 'accepted', // Only show completed trades
-    );
-    $trade_query = new WP_Query($trade_args);
+    $activities = get_recent_league_activity();
 
     ob_start();
     echo '<h3>Recent League Activity</h3>';
 
-    if( $trade_query->have_posts() ) {
+    if( !empty($activities) ) {
         echo '<ul class="activity-feed">';
-        while( $trade_query->have_posts() ) {
-            $trade_query->the_post();
-            $proposer_id = get_field('proposing_manager');
-            $target_id = get_field('target_manager');
-            $proposer = get_userdata($proposer_id);
-            $target = get_userdata($target_id);
-
-            if ($proposer && $target) {
-                echo '<li>';
-                echo '<span class="activity-date">' . get_the_date('M j') . '</span>';
-                echo '<span class="activity-text">A trade was completed between <strong>' . esc_html($proposer->display_name) . '</strong> and <strong>' . esc_html($target->display_name) . '</strong>.</span>';
-                echo '</li>';
-            }
+        foreach( $activities as $activity ) {
+            echo '<li>';
+            echo '<span class="activity-date">' . date('M j', $activity['timestamp']) . '</span>';
+            echo '<span class="activity-text">' . $activity['text'] . '</span>';
+            echo '</li>';
         }
         echo '</ul>';
     } else {
         echo '<p>No recent transactions to report.</p>';
     }
-    wp_reset_postdata();
 
     return ob_get_clean();
 }
