@@ -1,0 +1,418 @@
+/* --- Front Office Dynasty Sports Custom Colors --- */
+:root {
+    --fod-blue-primary: #2E6DA4; /* Based on your logo's shield blue */
+    --fod-orange-accent: #E87426; /* Based on your logo's orange ball */
+    --fod-gray-dark: #4A4A4A;    /* For body text, etc. */
+    --fod-gray-medium: #888888;  /* For secondary text */
+    --fod-gray-light: #F8F8F8;   /* For subtle backgrounds and borders */
+    --fod-white: #FFFFFF;
+
+    /* Semantic colors for notices/feedback */
+    --fod-success-green: #4CAF50;
+    --fod-error-red: #D9534F;
+    --fod-info-blue: #2196F3;
+}
+
+/* -------------------------------------------
+   Global Styles & Typography
+------------------------------------------- */
+body {
+    color: var(--fod-gray-dark);
+    background-color: #fcfcfc;
+}
+
+body.fa-modal-open {
+    overflow: hidden;
+}
+
+a {
+    color: var(--fod-orange-accent);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+a:hover {
+    color: var(--fod-blue-primary);
+    text-decoration: underline;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: var(--fod-blue-primary);
+    margin-bottom: 15px;
+}
+
+h2 {
+    font-size: 2em;
+    border-bottom: 2px solid var(--fod-orange-accent);
+    padding-bottom: 10px;
+    margin-top: 30px;
+}
+
+/* -------------------------------------------
+   Layout Helpers & Selectors
+------------------------------------------- */
+.is-selected {
+    background: rgba(46, 109, 164, .1);
+    border-radius: .375rem;
+    padding: .15rem .5rem;
+}
+
+.team-selector-ui,
+.league-selector-ui,
+.fa-controls-section {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem .75rem;
+    margin: 0 0 16px 0;
+    padding: 10px;
+    background-color: var(--fod-gray-light);
+    border-radius: 6px;
+}
+
+.team-selector-ui a,
+.league-selector-ui a {
+    text-decoration: none;
+}
+
+.team-selector-ui a.is-selected,
+.league-selector-ui a.is-selected {
+    color: var(--fod-blue-primary);
+    font-weight: 600;
+    border-bottom: 2px solid var(--fod-orange-accent);
+    background: transparent;
+}
+
+/* -------------------------------------------
+   Notices and Alerts
+------------------------------------------- */
+#roster-notices-container,
+#waiver-notices-container {
+    margin: 12px 0 16px 0;
+}
+
+.notice-inline {
+    padding: 10px 15px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9em;
+    font-weight: bold;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.notice-inline.notice-success {
+    background-color: #EBF8EE;
+    color: var(--fod-success-green);
+    border: 1px solid var(--fod-success-green);
+}
+
+.notice-inline.notice-error {
+    background-color: #FEEBEB;
+    color: var(--fod-error-red);
+    border: 1px solid var(--fod-error-red);
+}
+
+.notice-inline.notice-info {
+    background-color: #EBF7FD;
+    color: var(--fod-info-blue);
+    border: 1px solid var(--fod-info-blue);
+}
+
+.notice-dismiss {
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 1.2em;
+    cursor: pointer;
+    margin-left: 10px;
+}
+.notice-dismiss:hover {
+    opacity: 0.7;
+}
+
+
+/* -------------------------------------------
+   Tables
+------------------------------------------- */
+.fantasy-table-base {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0 22px 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.fantasy-table-base thead {
+    background-color: var(--fod-blue-primary);
+    color: var(--fod-white);
+}
+
+.fantasy-table-base th {
+    padding: 12px 15px;
+    text-align: left;
+    font-weight: bold;
+}
+
+.fantasy-table-base tbody tr {
+    border-bottom: 1px solid #eee;
+}
+
+.fantasy-table-base tbody tr:nth-child(odd) {
+    background-color: var(--fod-gray-light);
+}
+
+.fantasy-table-base tbody tr:hover {
+    background-color: rgba(232, 116, 38, 0.1); /* Light orange tint on hover */
+}
+
+.fantasy-table-base td {
+    padding: 10px 15px;
+    vertical-align: middle;
+}
+
+/* Column-specific alignments and widths */
+.fantasy-table-base td:nth-child(1), .fantasy-table-base th:nth-child(1) { min-width: 180px; } /* Name */
+.fantasy-table-base td:nth-child(4), .fantasy-table-base th:nth-child(4) { text-align: center; } /* IL */
+.fantasy-table-base td:nth-child(5), .fantasy-table-base th:nth-child(5) { text-align: center; } /* 40-Man */
+.fantasy-table-base td:nth-child(6), .fantasy-table-base th:nth-child(6) { text-align: center; } /* DFA Only */
+.fantasy-table-base td:nth-child(n+8), .fantasy-table-base th:nth-child(n+8) { text-align: right; } /* Contract years */
+
+.deadcap-breakdown td {
+    vertical-align: top;
+    padding-top: 12px;
+    padding-bottom: 12px;
+}
+.deadcap-breakdown td:nth-child(3) { text-align: right; }
+
+/* Pagination */
+.fa-pagination {
+    margin: 12px 0 24px 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+}
+.fa-pagination a,
+.fa-pagination span {
+    display: inline-block;
+    padding: .35rem .6rem;
+    border: 1px solid #ddd;
+    border-radius: .375rem;
+    text-decoration: none;
+}
+.fa-pagination .current {
+    background: var(--fod-orange-accent);
+    color: #fff;
+    border-color: var(--fod-orange-accent);
+}
+
+/* -------------------------------------------
+   Buttons & Inputs
+------------------------------------------- */
+.button,
+input[type="submit"],
+.button-primary {
+    background-color: var(--fod-orange-accent);
+    color: var(--fod-white);
+    border: 1px solid var(--fod-orange-accent);
+    padding: 8px 15px;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.button:hover,
+input[type="submit"]:hover,
+.button-primary:hover {
+    background-color: #CF611A;
+    border-color: #CF611A;
+}
+
+.button-secondary {
+    background-color: var(--fod-blue-primary);
+    color: var(--fod-white);
+    border: 1px solid var(--fod-blue-primary);
+}
+
+.button-secondary:hover {
+    background-color: #265C8E;
+    border-color: #265C8E;
+}
+
+.button:disabled,
+input[type="submit"]:disabled {
+    background-color: var(--fod-gray-medium);
+    border-color: var(--fod-gray-medium);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.fa-search-form input[type="search"],
+.fa-search-wrapper input[type="search"] {
+    padding: .45rem .55rem;
+    border: 1px solid #d1d5db;
+    border-radius: .375rem;
+    min-width: 240px;
+}
+
+/* -------------------------------------------
+   Free Agent Offer Modal
+------------------------------------------- */
+#fa-offer-modal {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15,23,42,.55);
+    z-index: 100000;
+}
+#fa-offer-modal.fa-modal-hidden { display: none; }
+.fa-modal-content {
+    position: relative;
+    width: min(760px, 95vw);
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 20px 50px rgba(0,0,0,.25);
+    padding: 18px 20px 20px 20px;
+    border: 1px solid #e5e7eb;
+}
+.fa-modal-content h3 {
+    margin: 0 0 8px 0;
+}
+.fa-modal-close {
+    position: absolute;
+    right: 10px;
+    top: 8px;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+}
+.fa-modal-close::before {
+    content: "×";
+    font-size: 22px;
+    line-height: 28px;
+    display: block;
+    text-align: center;
+    color: #6b7280;
+}
+#fa-modal-message {
+    margin: 6px 0 10px 0;
+    color: var(--fod-error-red);
+    min-height: 1em;
+}
+.fa-modal-salary-inputs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(200px, 1fr));
+    gap: .6rem .8rem;
+    margin: 10px 0 12px 0;
+}
+.fa-modal-year-input label {
+    display: inline-block;
+    width: auto;
+    margin-right: .25rem;
+}
+.fa-modal-year-input input[type="number"] {
+    width: 140px;
+    padding: .35rem .45rem;
+    border: 1px solid #d1d5db;
+    border-radius: .375rem;
+}
+.fa-modal-content .button {
+    margin-right: 6px;
+}
+
+/* -------------------------------------------
+   Header/logo tweaks
+------------------------------------------- */
+.team-header {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    margin-bottom: 10px;
+}
+.team-logo-img {
+    max-height: 96px;
+    height: auto;
+    width: auto;
+    display: block;
+}
+
+/* -------------------------------------------
+   Responsive
+------------------------------------------- */
+@media (max-width: 860px) {
+    .fantasy-table-base {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .fa-modal-salary-inputs {
+        grid-template-columns: 1fr;
+    }
+    .team-logo-img {
+        max-height: 72px;
+    }
+}
+
+/* Styling for the Homepage Activity Feed */
+.activity-feed {
+    list-style: none;
+    margin-left: 0;
+    padding-left: 0;
+}
+
+.activity-feed li {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 12px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.activity-feed .activity-date {
+    font-weight: bold;
+    color: var(--fod-gray-medium);
+    flex-shrink: 0;
+}
+/* Ensure buttons in action cells are well-spaced and wrap gracefully */
+.player-action-cell,
+.fa-action-cell {
+    display: flex; /* Use flexbox for layout */
+    flex-wrap: wrap; /* Allow buttons to wrap to the next line if needed */
+    gap: 8px; /* Add a good amount of space between buttons */
+    justify-content: flex-start; /* Align buttons to the start of the cell */
+    align-items: center; /* Vertically center them if they are on one line */
+    min-width: 150px; /* Give the cell itself a minimum width to prevent table squishing */
+}
+
+/* Make sure the button itself doesn't have an excessive default margin */
+.player-action-cell button,
+.fa-action-cell button {
+    margin: 0; /* Remove any default button margins that might interfere */
+    white-space: nowrap; /* Prevent button text from wrapping internally */
+    flex-shrink: 0; /* Prevent buttons from shrinking too much */
+    /* Remove previous min-width and font-size adjustments here */
+    /* Let the button's natural padding and text size determine its width */
+}
+
+/* Adjust padding for the table cells containing the buttons, if necessary */
+.fantasy-table-base td.player-action-cell,
+.fantasy-table-base td.fa-action-cell {
+    padding: 10px; /* Ensure there's enough internal padding for the buttons */
+}
+
+/* Optional: If the entire table is still too squished on very small screens,
+   we can specifically adjust the font size for buttons ONLY on small screens. */
+@media (max-width: 600px) {
+    .player-action-cell button,
+    .fa-action-cell button {
+        font-size: 0.85em; /* Slightly smaller font for tighter spaces */
+        padding: 6px 10px; /* Adjust padding for smaller font */
+    }
+}

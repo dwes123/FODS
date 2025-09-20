@@ -1,0 +1,15 @@
+/*
+ Theme Name:   Twenty Twenty-Two Child
+ Theme URI:    /* Optional: Add your website URL here */
+ Description:  Child theme for the Twenty Twenty-Two theme
+ Author:       /* Optional: Add your name here */
+ Author URI:   /* Optional: Add your website URL here */
+ Template:     twentytwentytwo
+ Version:      1.0.0
+ License:      GNU General Public License v2 or later
+ License URI:  http://www.gnu.org/licenses/gpl-2.0.html
+ Tags:         child-theme
+ Text Domain:  twentytwentytwo-child
+*/
+
+/* Add custom CSS below this line */
