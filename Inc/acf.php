@@ -134,6 +134,97 @@ if( function_exists('acf_add_local_field_group') ) {
         'description' => 'Manage key dates for each league.',
     ));
 
+    // Team Financials (ISBP Balances)
+    acf_add_local_field_group(array(
+        'key' => 'group_team_financials',
+        'title' => 'Team Financials (ISBP)',
+        'fields' => array(
+            array(
+                'key' => 'field_isbp_mlb',
+                'label' => 'MLB ISBP Balances',
+                'name' => 'isbp_mlb',
+                'type' => 'repeater',
+                'layout' => 'table',
+                'button_label' => 'Add Team',
+                'sub_fields' => array(
+                    array(
+                        'key' => 'field_isbp_mlb_team',
+                        'label' => 'Team ID',
+                        'name' => 'team_id',
+                        'type' => 'text',
+                    ),
+                    array(
+                        'key' => 'field_isbp_mlb_balance',
+                        'label' => 'ISBP Balance',
+                        'name' => 'balance',
+                        'type' => 'number',
+                        'prepend' => '$',
+                        'default_value' => 0,
+                    ),
+                ),
+            ),
+            array(
+                'key' => 'field_isbp_aaa',
+                'label' => 'AAA ISBP Balances',
+                'name' => 'isbp_aaa',
+                'type' => 'repeater',
+                'layout' => 'table',
+                'button_label' => 'Add Team',
+                'sub_fields' => array(
+                    array(
+                        'key' => 'field_isbp_aaa_team',
+                        'label' => 'Team ID',
+                        'name' => 'team_id',
+                        'type' => 'text',
+                    ),
+                    array(
+                        'key' => 'field_isbp_aaa_balance',
+                        'label' => 'ISBP Balance',
+                        'name' => 'balance',
+                        'type' => 'number',
+                        'prepend' => '$',
+                        'default_value' => 0,
+                    ),
+                ),
+            ),
+            array(
+                'key' => 'field_isbp_aa',
+                'label' => 'AA ISBP Balances',
+                'name' => 'isbp_aa',
+                'type' => 'repeater',
+                'layout' => 'table',
+                'button_label' => 'Add Team',
+                'sub_fields' => array(
+                    array(
+                        'key' => 'field_isbp_aa_team',
+                        'label' => 'Team ID',
+                        'name' => 'team_id',
+                        'type' => 'text',
+                    ),
+                    array(
+                        'key' => 'field_isbp_aa_balance',
+                        'label' => 'ISBP Balance',
+                        'name' => 'balance',
+                        'type' => 'number',
+                        'prepend' => '$',
+                        'default_value' => 0,
+                    ),
+                ),
+            ),
+        ),
+        'location' => array(
+            array(
+                array(
+                    'param' => 'options_page',
+                    'operator' => '==',
+                    'value' => 'site-custom-settings',
+                ),
+            ),
+        ),
+        'menu_order' => 15,
+        'active' => true,
+    ));
+
     // Bid History Field Group
     acf_add_local_field_group(array(
         'key' => 'group_bid_history',
@@ -201,3 +292,4 @@ if( function_exists('acf_add_local_field_group') ) {
     ));
 
 }
+

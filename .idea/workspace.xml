@@ -6,6 +6,12 @@
   <component name="ChangeListManager">
     <list default="true" id="ba70289f-d978-48dc-b31c-be0d544f9685" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Inc/acf.php" beforeDir="false" afterPath="$PROJECT_DIR$/Inc/acf.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Inc/ajax-handlers.php" beforeDir="false" afterPath="$PROJECT_DIR$/Inc/ajax-handlers.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Inc/shortcodes.php" beforeDir="false" afterPath="$PROJECT_DIR$/Inc/shortcodes.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/JS/trade-form-ajax.js" beforeDir="false" afterPath="$PROJECT_DIR$/JS/trade-form-ajax.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/acf-json/group_68168a31a1488.json" beforeDir="false" afterPath="$PROJECT_DIR$/acf-json/group_68168a31a1488.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/acf-json/group_68176ce26eef2.json" beforeDir="false" afterPath="$PROJECT_DIR$/acf-json/group_68176ce26eef2.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -67,7 +73,7 @@
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;settings.php.frameworks&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;terminal&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
@@ -147,6 +153,7 @@
       <workItem from="1767218008392" duration="64212000" />
       <workItem from="1767974092888" duration="135000" />
       <workItem from="1767974250336" duration="400000" />
+      <workItem from="1767974672302" duration="11551000" />
     </task>
     <servers />
   </component>

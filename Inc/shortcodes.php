@@ -657,6 +657,54 @@ function display_trade_proposal_form_shortcode() {
             <select name="players_requested[]" id="players_requested" multiple size="8" disabled><option value="" disabled>-- Select League & Target First --</option></select>
             <span id="players-requested-loading" style="display: none;">Loading target players...</span>
         </p>
+
+        <div class="trade-isbp-section" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0;">
+            <p>
+                <label for="isbp_offered">ISBP $ to Offer:</label><br>
+                <input type="number" name="isbp_offered" id="isbp_offered" value="0" min="0" step="1000" style="width: 100%;">
+                <small id="my-isbp-balance-display" style="color: #666;"></small>
+            </p>
+            <p>
+                <label for="isbp_requested">ISBP $ to Request:</label><br>
+                <input type="number" name="isbp_requested" id="isbp_requested" value="0" min="0" step="1000" style="width: 100%;">
+                <small id="target-isbp-balance-display" style="color: #666;"></small>
+            </p>
+        </div>
+
+        <div id="trade-summary-preview" class="trade-summary-preview" style="background: #f0f0f1; padding: 20px; border-radius: 6px; margin-bottom: 20px; display: none;">
+            <h3 style="margin-top: 0;">Trade Summary</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                <div>
+                    <strong>Team A (You) Sends:</strong>
+                    <ul id="preview-offered-list" style="margin-top: 10px;"></ul>
+                    <div id="preview-offered-isbp" style="font-weight: bold; color: var(--fod-blue-primary);"></div>
+                </div>
+                <div>
+                    <strong>Team B Sends:</strong>
+                    <ul id="preview-requested-list" style="margin-top: 10px;"></ul>
+                    <div id="preview-requested-isbp" style="font-weight: bold; color: var(--fod-blue-primary);"></div>
+                </div>
+            </div>
+
+            <div class="salary-impact-container" style="margin-top: 25px; border-top: 1px solid #ccc; padding-top: 15px;">
+                <strong>Projected Salary Impact (Your Team):</strong>
+                <table class="fantasy-table-base" style="margin-top: 10px; font-size: 0.9em;">
+                    <thead>
+                        <tr>
+                            <th>Year</th>
+                            <th>Salary OUT</th>
+                            <th>Salary IN</th>
+                            <th>Net Change</th>
+                        </tr>
+                    </thead>
+                    <tbody id="salary-impact-body">
+                        <!-- Filled by JS -->
+                    </tbody>
+                </table>
+                <small><i>Note: Non-numeric values (ARB, UFA) are not included in totals.</i></small>
+            </div>
+        </div>
+
         <p>
             <label for="trade_comments">Comments (Optional):</label><br>
             <textarea name="trade_comments" id="trade_comments" rows="4" style="width: 100%;"></textarea>

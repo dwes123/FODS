@@ -115,6 +115,29 @@
                     "allow_in_bindings": 0,
                     "preview_size": "medium",
                     "parent_repeater": "field_68168aa084140"
+                },
+                {
+                    "key": "field_68a8f77c6f7b7",
+                    "label": "ISBP $ Balance",
+                    "name": "isbp_balance",
+                    "aria-label": "",
+                    "type": "number",
+                    "instructions": "Available International/Special Bonus Pool money.",
+                    "required": 0,
+                    "conditional_logic": 0,
+                    "wrapper": {
+                        "width": "",
+                        "class": "",
+                        "id": ""
+                    },
+                    "default_value": 0,
+                    "min": "",
+                    "max": "",
+                    "placeholder": "",
+                    "step": "",
+                    "prepend": "$",
+                    "append": "",
+                    "parent_repeater": "field_68168aa084140"
                 }
             ]
         },

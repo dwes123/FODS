@@ -74,7 +74,16 @@ function get_rostered_players_for_manager($league_id, $manager_id) {
             }
             $contract_display = !empty($contract_parts) ? ' (' . implode(', ', $contract_parts) . ')' : '';
 
-            $players[] = ['id' => $player_id, 'name' => $player_name . $contract_display];
+            $salaries = [];
+            foreach ([2026, 2027, 2028] as $y) {
+                $salaries[$y] = get_post_meta($player_id, 'contract_' . $y, true);
+            }
+
+            $players[] = [
+                'id' => $player_id, 
+                'name' => $player_name . $contract_display,
+                'salaries' => $salaries
+            ];
         }
     }
     wp_reset_postdata();
@@ -95,13 +104,18 @@ function handle_trade_proposal_submission() {
     $selected_league      = isset($_POST['trade_league']) ? sanitize_text_field( wp_unslash($_POST['trade_league']) ) : '';
     $offered_player_ids   = isset($_POST['players_offered'])   ? array_map('absint', (array)$_POST['players_offered'])   : array();
     $requested_player_ids = isset($_POST['players_requested']) ? array_map('absint', (array)$_POST['players_requested']) : array();
+    $isbp_offered         = isset($_POST['isbp_offered']) ? absint($_POST['isbp_offered']) : 0;
+    $isbp_requested       = isset($_POST['isbp_requested']) ? absint($_POST['isbp_requested']) : 0;
     $trade_comments       = isset($_POST['trade_comments']) ? sanitize_textarea_field(wp_unslash($_POST['trade_comments'])) : '';
 
     $offered_player_ids   = array_filter($offered_player_ids);
     $requested_player_ids = array_filter($requested_player_ids);
 
     if ( empty($target_manager_id) || empty($selected_league) ) { wp_redirect(add_query_arg( 'trade_error', 'missing_fields', $redirect_url )); exit; }
-    if ( empty($offered_player_ids) && empty($requested_player_ids) ) { wp_redirect(add_query_arg( 'trade_error', 'no_players', $redirect_url )); exit; }
+    
+    $has_assets = (!empty($offered_player_ids) || $isbp_offered > 0) && (!empty($requested_player_ids) || $isbp_requested > 0);
+    if ( !$has_assets ) { wp_redirect(add_query_arg( 'trade_error', 'no_players', $redirect_url )); exit; }
+    
     if ( $target_manager_id === $proposing_manager_id ) { wp_redirect(add_query_arg( 'trade_error', 'self_trade', $redirect_url )); exit; }
 
     $post_data = array('post_type' => 'trade_proposal', 'post_title'  => 'Trade Offer: User ' . $proposing_manager_id . ' to User ' . $target_manager_id . ' (' . $selected_league . ') - ' . date('Y-m-d H:i'), 'post_status' => 'publish', 'post_author' => $proposing_manager_id);
@@ -113,6 +127,8 @@ function handle_trade_proposal_submission() {
         update_field('league_id', $selected_league, $new_post_id);
         update_field('players_offered', $offered_player_ids, $new_post_id);
         update_field('players_requested', $requested_player_ids, $new_post_id);
+        update_field('isbp_offered', $isbp_offered, $new_post_id);
+        update_field('isbp_requested', $isbp_requested, $new_post_id);
         update_field('trade_comments', $trade_comments, $new_post_id);
         update_field('trade_status', 'pending', $new_post_id);
 
@@ -122,13 +138,17 @@ function handle_trade_proposal_submission() {
             $proposer_info = get_userdata($proposing_manager_id);
             $proposer_name = $proposer_info ? $proposer_info->display_name : 'A manager';
             $subject = 'New Trade Proposal Received!';
-            $offered_names   = !empty($offered_player_ids) ? array_map(function($id){ return get_the_title($id) ?: '(?)'; }, $offered_player_ids) : ['N/A'];
-            $requested_names = !empty($requested_player_ids) ? array_map(function($id){ return get_the_title($id) ?: '(?)'; }, $requested_player_ids) : ['N/A'];
+            
+            $offered_list   = !empty($offered_player_ids) ? implode(', ', array_map('get_the_title', $offered_player_ids)) : 'No players';
+            if ($isbp_offered > 0) $offered_list .= " + $" . number_format($isbp_offered) . " ISBP";
+            
+            $requested_list = !empty($requested_player_ids) ? implode(', ', array_map('get_the_title', $requested_player_ids)) : 'No players';
+            if ($isbp_requested > 0) $requested_list .= " + $" . number_format($isbp_requested) . " ISBP";
             
             $message  = "Hello " . esc_html($target_user_info->display_name) . ",\n\n";
             $message .= esc_html($proposer_name) . " has proposed a trade with you in the " . esc_html($selected_league) . " league.\n\n";
-            $message .= "They Offer: " . esc_html(implode(', ', $offered_names)) . "\n";
-            $message .= "They Request: " . esc_html(implode(', ', $requested_names)) . "\n\n";
+            $message .= "They Offer: " . $offered_list . "\n";
+            $message .= "They Request: " . $requested_list . "\n\n";
             if ( ! empty( $trade_comments ) ) {
                 $message .= "Comments: " . esc_html($trade_comments) . "\n\n";
             }
@@ -147,6 +167,22 @@ function handle_trade_proposal_submission() {
 }
 add_action( 'admin_post_process_trade_proposal', 'handle_trade_proposal_submission' );
 
+/**
+ * Helper to get a team's ISBP balance from the options page.
+ */
+function fod_get_team_isbp_balance($league_id, $team_id) {
+    $field_name = 'isbp_' . strtolower($league_id);
+    $rows = get_field($field_name, 'option');
+    if (is_array($rows)) {
+        foreach ($rows as $row) {
+            if (($row['team_id'] ?? '') === $team_id) {
+                return (int)($row['balance'] ?? 0);
+            }
+        }
+    }
+    return 0;
+}
+
 function get_managers_for_trade_ajax_handler() {
     if ( !is_user_logged_in() ) { wp_send_json_error('Not logged in.'); wp_die(); }
     
@@ -164,9 +200,11 @@ function get_managers_for_trade_ajax_handler() {
         if ( !empty($managed_teams) && is_array($managed_teams) ) {
             foreach ( $managed_teams as $team ) {
                 if ( is_array($team) && isset($team['league_id']) && $team['league_id'] === $league_id ) {
+                    $team_id = $team['fantasy_team_id'];
                     $managers[] = [
                         'id' => $user->ID,
-                        'name' => $team['fantasy_team_id']
+                        'name' => $team_id,
+                        'isbp_balance' => fod_get_team_isbp_balance($league_id, $team_id)
                     ];
                     break; 
                 }
@@ -184,12 +222,25 @@ function get_my_players_for_trade_ajax_handler() {
     if ( empty($league_id) ) { wp_send_json_error('League ID missing.'); wp_die(); }
 
     $current_user_id = get_current_user_id();
+    
+    // Get my team ID for this league
+    $my_team_id = '';
+    $managed = get_field('managed_teams', 'user_' . $current_user_id);
+    if (is_array($managed)) {
+        foreach ($managed as $t) {
+            if (($t['league_id'] ?? '') === $league_id) { $my_team_id = $t['fantasy_team_id']; break; }
+        }
+    }
+
     $players = get_rostered_players_for_manager($league_id, $current_user_id);
 
     if ( is_wp_error($players) ) {
         wp_send_json_error($players->get_error_message());
     } else {
-        wp_send_json_success($players);
+        wp_send_json_success([
+            'players' => $players,
+            'isbp_balance' => fod_get_team_isbp_balance($league_id, $my_team_id)
+        ]);
     }
     wp_die();
 }
@@ -311,6 +362,8 @@ function handle_accept_trade() {
 
     $offered_ids = get_field('players_offered', $trade_id) ?: [];
     $requested_ids = get_field('players_requested', $trade_id) ?: [];
+    $isbp_offered = (int) get_field('isbp_offered', $trade_id);
+    $isbp_requested = (int) get_field('isbp_requested', $trade_id);
 
     // Helper to get team ID for a user in a league
     $get_team_id = function($uid, $lid) {
@@ -342,13 +395,42 @@ function handle_accept_trade() {
         }
     }
 
-    // Execute Trade
-    foreach ($offered_ids as $pid) {
-        update_field('fantasy_team_id', $target_team, $pid);
-    }
-    foreach ($requested_ids as $pid) {
-        update_field('fantasy_team_id', $proposer_team, $pid);
-    }
+    // Execute Player Trade
+    foreach ($offered_ids as $pid) { update_field('fantasy_team_id', $target_team, $pid); }
+    foreach ($requested_ids as $pid) { update_field('fantasy_team_id', $proposer_team, $pid); }
+
+    // --- Transfer ISBP Funds (Central Options Table) ---
+    $transfer_isbp = function($league, $from_team, $to_team, $amount) {
+        if ($amount <= 0 || !$from_team || !$to_team) return;
+        
+        $field_name = 'isbp_' . strtolower($league);
+        $rows = get_field($field_name, 'option') ?: [];
+        
+        $from_idx = -1; $to_idx = -1;
+        foreach ($rows as $idx => $row) {
+            if (($row['team_id'] ?? '') === $from_team) $from_idx = $idx;
+            if (($row['team_id'] ?? '') === $to_team) $to_idx = $idx;
+        }
+
+        // Auto-create rows if missing
+        if ($from_idx === -1) {
+            $rows[] = ['team_id' => $from_team, 'balance' => 0];
+            $from_idx = count($rows) - 1;
+        }
+        if ($to_idx === -1) {
+            $rows[] = ['team_id' => $to_team, 'balance' => 0];
+            $to_idx = count($rows) - 1;
+        }
+
+        // Update balances
+        $rows[$from_idx]['balance'] = (int)$rows[$from_idx]['balance'] - $amount;
+        $rows[$to_idx]['balance']   = (int)$rows[$to_idx]['balance'] + $amount;
+
+        update_field($field_name, $rows, 'option');
+    };
+
+    if ($isbp_offered > 0) { $transfer_isbp($league_id, $proposer_team, $target_team, $isbp_offered); }
+    if ($isbp_requested > 0) { $transfer_isbp($league_id, $target_team, $proposer_team, $isbp_requested); }
 
     update_post_meta($trade_id, 'trade_status', 'accepted');
     wp_update_post(['ID' => $trade_id, 'post_status' => 'draft']);
@@ -357,9 +439,12 @@ function handle_accept_trade() {
     $offered_names = array_map('get_the_title', $offered_ids);
     $requested_names = array_map('get_the_title', $requested_ids);
     
-    $summary = "Trade Accepted: $proposer_team sends " . implode(', ', $offered_names) . " to $target_team for " . implode(', ', $requested_names) . ".";
-
-    do_action('my_fantasy_transaction', [
+    $summary = "Trade Accepted: $proposer_team sends " . (empty($offered_names) ? 'no players' : implode(', ', $offered_names));
+    if ($isbp_offered > 0) $summary .= " + $" . number_format($isbp_offered) . " ISBP";
+    
+    $summary .= " to $target_team for " . (empty($requested_names) ? 'no players' : implode(', ', $requested_names));
+    if ($isbp_requested > 0) $summary .= " + $" . number_format($isbp_requested) . " ISBP";
+    $summary .= ".";    do_action('my_fantasy_transaction', [
         'transaction_type' => 'Trade',
         'player_ids'       => array_merge($offered_ids, $requested_ids),
         'primary_team'     => $proposer_team,
