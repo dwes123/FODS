@@ -324,7 +324,7 @@ function handle_accept_trade() {
     };
 
     $proposer_team = $get_team_id($proposer_id, $league_id);
-    $target_team = get_team_id($target_id, $league_id);
+    $target_team = $get_team_id($target_id, $league_id);
 
     if ( ! $proposer_team || ! $target_team ) {
         wp_redirect( add_query_arg(['trade_action'=>'trade_action_error', 'trade_action_error_detail'=>'team_id_missing'], $redirect_url) ); exit;
@@ -564,13 +564,6 @@ function promote_to_40man_ajax_handler() {
 }
 add_action('wp_ajax_promote_to_40man', 'promote_to_40man_ajax_handler');
 
-// Other AJAX handlers...
-add_action('wp_ajax_fa_search', 'fa_search_ajax_handler');
-add_action('wp_ajax_waive_player', 'waive_player_ajax_handler');
-add_action('wp_ajax_option_to_minors', 'option_to_minors_ajax_handler');
-add_action('wp_ajax_move_player_to_il', 'move_player_to_il_ajax_handler');
-add_action('wp_ajax_activate_player_from_il', 'activate_player_from_il_ajax_handler');
-
 function promote_to_26man_ajax_handler() {
     check_ajax_referer('promote_to_26man_nonce', 'nonce');
     if ( !is_user_logged_in() ) { wp_send_json_error('Not logged in.'); wp_die(); }
@@ -599,3 +592,159 @@ function promote_to_26man_ajax_handler() {
     wp_die();
 }
 add_action('wp_ajax_promote_to_26man', 'promote_to_26man_ajax_handler');
+
+/**
+ * Moves a player from 26-man roster to minors.
+ * Uses an option year if it's the first time this season.
+ */
+function option_to_minors_ajax_handler() {
+    check_ajax_referer('option_to_minors_nonce', 'nonce');
+    if ( !is_user_logged_in() ) { wp_send_json_error('Not logged in.'); wp_die(); }
+    
+    $player_id = isset($_POST['player_id']) ? absint($_POST['player_id']) : 0;
+    $league_id = isset($_POST['league_id']) ? sanitize_text_field($_POST['league_id']) : '';
+    $team_id = isset($_POST['team_id']) ? sanitize_text_field($_POST['team_id']) : '';
+
+    if ( !$player_id || !$league_id || !$team_id ) { wp_send_json_error('Missing required data.'); wp_die(); }
+    if ( !is_user_owner_of_player( get_current_user_id(), $player_id ) ) { wp_send_json_error('You do not have permission to manage this player.'); wp_die(); }
+
+    // 1. Remove from 26-man
+    update_post_meta($player_id, 'status_26_man', '0');
+
+    // 2. Handle Option Years Logic
+    $current_year = date('Y');
+    $moves_log = get_field('roster_moves_log', $player_id) ?: [];
+    
+    $already_optioned_this_year = false;
+    if (is_array($moves_log)) {
+        foreach ($moves_log as $move) {
+            if (($move['move_year'] ?? '') === $current_year && ($move['move_type'] ?? '') === 'Optioned') {
+                $already_optioned_this_year = true;
+                break;
+            }
+        }
+    }
+
+    if (!$already_optioned_this_year) {
+        $option_years_used = (int) get_post_meta($player_id, 'option_years_used', true);
+        update_post_meta($player_id, 'option_years_used', $option_years_used + 1);
+    }
+
+    // 3. Add to moves log
+    add_row('roster_moves_log', [
+        'move_type' => 'Optioned',
+        'move_year' => $current_year,
+        'move_date' => current_time('mysql')
+    ], $player_id);
+
+    // 4. Log Transaction
+    $player_name = get_the_title($player_id);
+    $summary = "$player_name has been optioned to the minors by $team_id.";
+    do_action('my_fantasy_transaction', [
+        'transaction_type' => 'Roster Move',
+        'player_ids'       => [$player_id],
+        'primary_team'     => $team_id,
+        'summary'          => $summary,
+        'league_id'        => $league_id
+    ]);
+
+    wp_send_json_success(['message' => 'Player optioned to minors.']);
+    wp_die();
+}
+add_action('wp_ajax_option_to_minors', 'option_to_minors_ajax_handler');
+
+/**
+ * Places a player on the Injured List.
+ */
+function move_player_to_il_ajax_handler() {
+    check_ajax_referer('move_to_il_nonce', 'nonce');
+    if ( !is_user_logged_in() ) { wp_send_json_error('Not logged in.'); wp_die(); }
+    
+    $player_id = isset($_POST['player_id']) ? absint($_POST['player_id']) : 0;
+    $il_duration = isset($_POST['il_duration']) ? sanitize_text_field($_POST['il_duration']) : '';
+    
+    $league_id = get_post_meta($player_id, 'league_id', true);
+    $team_id = get_post_meta($player_id, 'fantasy_team_id', true);
+
+    if ( !$player_id || !$il_duration || !$league_id || !$team_id ) { wp_send_json_error('Missing required data.'); wp_die(); }
+    if ( !is_user_owner_of_player( get_current_user_id(), $player_id ) ) { wp_send_json_error('You do not have permission to manage this player.'); wp_die(); }
+
+    // Update statuses
+    update_post_meta($player_id, 'status_il', $il_duration . '-Day IL');
+    update_post_meta($player_id, 'il_start_date', current_time('mysql'));
+    update_post_meta($player_id, 'status_26_man', '0');
+    
+    if ($il_duration === '60') {
+        update_post_meta($player_id, 'status_40_man', '');
+    }
+
+    // Log Transaction
+    $player_name = get_the_title($player_id);
+    $summary = "$player_name has been placed on the $il_duration-Day IL by $team_id.";
+    do_action('my_fantasy_transaction', [
+        'transaction_type' => 'Roster Move',
+        'player_ids'       => [$player_id],
+        'primary_team'     => $team_id,
+        'summary'          => $summary,
+        'league_id'        => $league_id
+    ]);
+
+    wp_send_json_success(['message' => 'Player placed on IL.']);
+    wp_die();
+}
+add_action('wp_ajax_move_player_to_il', 'move_player_to_il_ajax_handler');
+
+/**
+ * Activates a player from the Injured List.
+ * Includes a check to ensure minimum time has passed.
+ */
+function activate_player_from_il_ajax_handler() {
+    check_ajax_referer('activate_from_il_nonce', 'nonce');
+    if ( !is_user_logged_in() ) { wp_send_json_error('Not logged in.'); wp_die(); }
+    
+    $player_id = isset($_POST['player_id']) ? absint($_POST['player_id']) : 0;
+    
+    $status_il = get_post_meta($player_id, 'status_il', true); // e.g. "8-Day IL"
+    $start_date = get_post_meta($player_id, 'il_start_date', true);
+    
+    // --- IL Duration Logic ---
+    if ($start_date) {
+        $days_on_il = floor((current_time('timestamp') - strtotime($start_date)) / 86400);
+        $required_days = (int) $status_il; // Extracts 8, 12, or 60 from string
+        
+        if ($days_on_il < $required_days) {
+            $days_left = $required_days - $days_on_il;
+            wp_send_json_error("Player not eligible to be reinstated from IL. $days_left more day(s) must pass.");
+            wp_die();
+        }
+    }
+
+    $league_id = get_post_meta($player_id, 'league_id', true);
+    $team_id = get_post_meta($player_id, 'fantasy_team_id', true);
+
+    if ( !$player_id || !$league_id || !$team_id ) { wp_send_json_error('Missing required data.'); wp_die(); }
+    if ( !is_user_owner_of_player( get_current_user_id(), $player_id ) ) { wp_send_json_error('You do not have permission to manage this player.'); wp_die(); }
+
+    // Remove IL status
+    update_post_meta($player_id, 'status_il', '');
+    update_post_meta($player_id, 'il_start_date', '');
+
+    // Log Transaction
+    $player_name = get_the_title($player_id);
+    $summary = "$player_name has been activated from the IL by $team_id.";
+    do_action('my_fantasy_transaction', [
+        'transaction_type' => 'Roster Move',
+        'player_ids'       => [$player_id],
+        'primary_team'     => $team_id,
+        'summary'          => $summary,
+        'league_id'        => $league_id
+    ]);
+
+    wp_send_json_success(['message' => 'Player activated from IL. They are now off-roster.']);
+    wp_die();
+}
+add_action('wp_ajax_activate_from_il', 'activate_player_from_il_ajax_handler');
+
+// Other AJAX handlers...
+add_action('wp_ajax_fa_search', 'fa_search_ajax_handler');
+add_action('wp_ajax_waive_player', 'waive_player_ajax_handler');
