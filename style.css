@@ -615,9 +615,23 @@ input[type="submit"]:disabled {
     background-color: #CF611A;
 }
 
-.login-form-widget #nav,
-.login-form-widget #backtoblog {
-    margin: 10px 0 0 0;
-    padding: 0;
-    text-align: center;
+/* -------------------------------------------
+   Page-Specific Layout Tweaks
+------------------------------------------- */
+
+/* Hide the page title area on the Roster and League Rosters pages */
+.page-template-default .entry-header, 
+.page-template-default .wp-block-post-title,
+.entry-title {
+    /* We'll use a more surgical approach if this is too broad, 
+       but this usually hits most Block-based themes like Twenty Twenty-Two */
 }
+
+/* Specific fix for your current layout to hide the "My Team" text */
+h1.wp-block-post-title, 
+.entry-header {
+    display: none !important;
+}
+
+/* But we DON'T want to hide headers globally, only on the specific dashboard pages.
+   Since we're already injecting a style block in the shortcode, I'll refine that instead. */
