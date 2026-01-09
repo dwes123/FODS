@@ -4,6 +4,35 @@
  * Refactored to use helper functions from /inc/roster-helpers.php
  */
 
+/**
+ * Helper function to sort player IDs by custom baseball position order.
+ */
+function fod_sort_players_by_position( $player_ids ) {
+    if ( empty( $player_ids ) ) return [];
+
+    $order_map = [ 'C'=>1, '1B'=>2, '2B'=>3, 'SS'=>4, '3B'=>5, 'OF'=>6, 'SP'=>7, 'RP'=>8 ];
+
+    $players = [];
+    foreach ( $player_ids as $pid ) {
+        $pos = strtoupper( get_post_meta( $pid, 'position', true ) );
+        $players[] = [
+            'id'    => $pid,
+            'pos'   => $pos,
+            'name'  => get_the_title( $pid ),
+            'order' => $order_map[ $pos ] ?? 99
+        ];
+    }
+
+    usort( $players, function( $a, $b ) {
+        if ( $a['order'] === $b['order'] ) {
+            return strcasecmp( $a['name'], $b['name'] );
+        }
+        return $a['order'] <=> $b['order'];
+    });
+
+    return array_column( $players, 'id' );
+}
+
 /* ------------------------------------------------------------------------
    [my_team_roster] — Roster w/ Dead Cap totals & breakdown
 ------------------------------------------------------------------------ */
@@ -53,7 +82,8 @@ function display_manager_roster_shortcode() {
             'selected_league_id' => $selected_league_id,
             'selected_team_id'   => $selected_team_id,
         ];
-        foreach ( $q->posts as $player_id ) {
+        $sorted_ids = fod_sort_players_by_position( $q->posts );
+        foreach ( $sorted_ids as $player_id ) {
             $rows[] = fod_render_player_roster_row( $player_id, $config, $salary_totals );
         }
         return $rows;
@@ -322,7 +352,8 @@ function display_league_rosters_shortcode() {
             'selected_league_id' => $selected_league_id,
             'selected_team_id'   => $selected_team_id,
         ];
-        foreach ( $q->posts as $player_id ) {
+        $sorted_ids = fod_sort_players_by_position( $q->posts );
+        foreach ( $sorted_ids as $player_id ) {
             $rows[] = fod_render_player_roster_row( $player_id, $config, $salary_totals );
         }
         return $rows;
