@@ -5,36 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ba70289f-d978-48dc-b31c-be0d544f9685" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/Inc/admin-arbitration-approval.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Inc/admin-filters.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Inc/admin-player-assign.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Inc/admin-user-columns.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Inc/arbitration.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Inc/csv-importer.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Inc/draft-room.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Inc/nba-shortcodes.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Inc/roster-helpers.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Inc/transactions.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Inc/weekly-rotations.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/JS/draft-room.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Python/normalize_free_agents.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Python/normalize_rosters.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/acf-json/group_commissioner_roles.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/acf-json/group_league_dates.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/Front Office Dynasty Sports.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/Front Office Dynasty Sports.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Inc/acf.php" beforeDir="false" afterPath="$PROJECT_DIR$/Inc/acf.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Inc/admin.php" beforeDir="false" afterPath="$PROJECT_DIR$/Inc/admin.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Inc/ajax-handlers.php" beforeDir="false" afterPath="$PROJECT_DIR$/Inc/ajax-handlers.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Inc/cron.php" beforeDir="false" afterPath="$PROJECT_DIR$/Inc/cron.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Inc/enqueue.php" beforeDir="false" afterPath="$PROJECT_DIR$/Inc/enqueue.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Inc/shortcodes.php" beforeDir="false" afterPath="$PROJECT_DIR$/Inc/shortcodes.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/JS/fa-modal.js" beforeDir="false" afterPath="$PROJECT_DIR$/JS/fa-modal.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/import_free_agents.py" beforeDir="false" afterPath="$PROJECT_DIR$/Python/import_free_agents.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/process_league_data.py" beforeDir="false" afterPath="$PROJECT_DIR$/Python/process_league_data.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions.php" beforeDir="false" afterPath="$PROJECT_DIR$/functions.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/style.css" beforeDir="false" afterPath="$PROJECT_DIR$/style.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wp-config.php" beforeDir="false" afterPath="$PROJECT_DIR$/wp-config.php" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -87,7 +58,7 @@
     &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;fix/roster-count&quot;,
     &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
     &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
     &quot;last_opened_file_path&quot;: &quot;C:/Users/Dan/Desktop/Front Office Dynasty Sports&quot;,
@@ -173,7 +144,9 @@
       <workItem from="1765425857244" duration="38175000" />
       <workItem from="1766010519750" duration="61572000" />
       <workItem from="1767113998288" duration="18598000" />
-      <workItem from="1767218008392" duration="62523000" />
+      <workItem from="1767218008392" duration="64212000" />
+      <workItem from="1767974092888" duration="135000" />
+      <workItem from="1767974250336" duration="400000" />
     </task>
     <servers />
   </component>
