@@ -161,6 +161,33 @@ function display_manager_roster_shortcode() {
 
     // --- START: Print HTML ---
     ob_start();
+    ?>
+    <style>
+        /* Force spacing reset and use negative margin to pull logo up */
+        header.entry-header, .entry-title, .wp-block-post-title, hr { display: none !important; }
+        .wp-site-blocks { gap: 0 !important; padding-top: 0 !important; }
+        main, article, .entry-content { margin-top: 0 !important; padding-top: 0 !important; }
+        .team-header { 
+            margin-top: -80px !important; /* Pulls the logo up into the dead space */
+            margin-bottom: 20px; 
+            padding-top: 0 !important; 
+        }
+        header.wp-block-template-part { margin-bottom: 0 !important; }
+    </style>
+    <?php
+
+    // Fetch Team Logo
+    $logo_url = ''; 
+    foreach ($teams as $t) {
+        if ( ($t['league_id'] ?? '') === $selected_league_id && ($t['fantasy_team_id'] ?? '') === $selected_team_id ) {
+            $logo_url = $t['team_logo'] ?? '';
+            break;
+        }
+    }
+    if ($logo_url) {
+        if ( is_array($logo_url) ) { $logo_url = $logo_url['url']; }
+        echo '<div class="team-header"><img src="' . esc_url($logo_url) . '" alt="' . esc_attr($selected_team_id) . ' Logo" class="team-logo-img"></div>';
+    }
 
     // Team Selector Links
     $links = [];
@@ -185,12 +212,6 @@ function display_manager_roster_shortcode() {
     }
     echo '</div>';
 
-    // Header
-    $logo_url = ''; // This was undefined before, ensure it's initialized.
-    if ($logo_url) {
-        echo '<div class="team-header"><img src="' . esc_url($logo_url) . '" alt="' . esc_attr($selected_team_id) . ' Logo" class="team-logo-img"></div>';
-    }
-    echo '<h2>Roster for League: '.esc_html($selected_league_id).', Team: '.esc_html($selected_team_id).'</h2>';
     echo '<div id="roster-notices-container"></div>';
 
     // Roster Counts
@@ -320,6 +341,58 @@ function display_league_rosters_shortcode() {
     }
 
     ob_start();
+    ?>
+    <style>
+        /* Force spacing reset and use negative margin to pull logo up */
+        header.entry-header, .entry-title, .wp-block-post-title, hr { display: none !important; }
+        .wp-site-blocks { gap: 0 !important; padding-top: 0 !important; }
+        main, article, .entry-content { margin-top: 0 !important; padding-top: 0 !important; }
+        .team-header { 
+            margin-top: -80px !important; /* Pulls the logo up into the dead space */
+            margin-bottom: 20px; 
+            padding-top: 0 !important; 
+        }
+        header.wp-block-template-part { margin-bottom: 0 !important; }
+    </style>
+    <?php
+
+    // --- Fetch Team Logo for League View ---
+    $logo_url = '';
+    $owner_query = new WP_User_Query([
+        'meta_query' => [
+            'relation' => 'AND',
+            [
+                'key'     => 'managed_teams_$_league_id',
+                'value'   => $selected_league_id,
+                'compare' => '='
+            ],
+            [
+                'key'     => 'managed_teams_$_fantasy_team_id',
+                'value'   => $selected_team_id,
+                'compare' => '='
+            ]
+        ],
+        'number' => 1
+    ]);
+    $owners = $owner_query->get_results();
+    if ( ! empty($owners) ) {
+        $owner_id = $owners[0]->ID;
+        $owner_teams = get_field('managed_teams', 'user_' . $owner_id);
+        if ( is_array($owner_teams) ) {
+            foreach ($owner_teams as $ot) {
+                if ( ($ot['league_id'] ?? '') === $selected_league_id && ($ot['fantasy_team_id'] ?? '') === $selected_team_id ) {
+                    $logo_url = $ot['team_logo'] ?? '';
+                    break;
+                }
+            }
+        }
+    }
+
+    if ($logo_url) {
+        if ( is_array($logo_url) ) { $logo_url = $logo_url['url']; }
+        echo '<div class="team-header"><img src="' . esc_url($logo_url) . '" alt="' . esc_attr($selected_team_id) . ' Logo" class="team-logo-img"></div>';
+    }
+
     $base_url = get_permalink();
 
     // League and Team Selectors
@@ -337,8 +410,6 @@ function display_league_rosters_shortcode() {
         $links_t[] = '<a href="'.esc_url($url).'"'.($team === $selected_team_id ? ' class="is-selected"' : '').'>'.esc_html($team).'</a>';
     }
     echo implode(' | ', $links_t) . '</div>';
-
-    echo '<h2>Roster for League: '.esc_html($selected_league_id).', Team: '.esc_html($selected_team_id).'</h2>';
 
     $years_to_process = range( 2026, 2040 );
     $salary_totals    = array_fill_keys($years_to_process, 0.0);
