@@ -114,14 +114,11 @@ function display_manager_roster_shortcode() {
 
     // 26-Man Roster Count
     $meta_query_26 = $base_team_query;
-    $meta_query_26[] = [
-        'relation' => 'OR',
-        ['key' => 'status_26_man', 'value' => '1', 'compare' => '='],
-        ['key' => 'status_26_man', 'value' => 'X', 'compare' => '=']
-    ];
+    $meta_query_26[] = ['key' => 'status_26_man', 'value' => '1', 'compare' => '='];
     $q_26 = new WP_Query([
         'post_type' => 'playerdata',
         'fields' => 'ids',
+        'posts_per_page' => -1,
         'no_found_rows' => true,
         'meta_query' => $meta_query_26
     ]);
@@ -341,7 +338,7 @@ function display_league_rosters_shortcode() {
     $q_n40 = new WP_Query($args_n40);
     $non40_rows = $build_rows_readonly($q_n40);
 
-    $q_26 = new WP_Query([ 'post_type' => 'playerdata', 'fields' => 'ids', 'no_found_rows' => true, 'meta_query' => [ 'relation' => 'AND', ['key' => 'league_id', 'value' => $selected_league_id], ['key' => 'fantasy_team_id', 'value' => $selected_team_id], ['key' => 'status_26_man', 'value' => '1'] ] ]);
+    $q_26 = new WP_Query([ 'post_type' => 'playerdata', 'fields' => 'ids', 'posts_per_page' => -1, 'no_found_rows' => true, 'meta_query' => [ 'relation' => 'AND', ['key' => 'league_id', 'value' => $selected_league_id], ['key' => 'fantasy_team_id', 'value' => $selected_team_id], ['key' => 'status_26_man', 'value' => '1', 'compare' => '='] ] ]);
     $count_26 = $q_26->post_count;
     $count_40 = $q_40->post_count;
     $count_minors = $q_n40->post_count;
