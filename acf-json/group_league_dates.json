@@ -1,0 +1,113 @@
+{
+    "key": "group_league_dates",
+    "title": "League Key Dates",
+    "fields": [
+        {
+            "key": "field_dates_mlb",
+            "label": "MLB Key Dates",
+            "name": "dates_mlb",
+            "type": "repeater",
+            "layout": "table",
+            "button_label": "Add Date",
+            "sub_fields": [
+                {
+                    "key": "field_date_mlb_date",
+                    "label": "Date",
+                    "name": "date",
+                    "type": "text",
+                    "placeholder": "e.g. March 28, 2026"
+                },
+                {
+                    "key": "field_date_mlb_event",
+                    "label": "Event",
+                    "name": "event",
+                    "type": "text",
+                    "placeholder": "e.g. Opening Day"
+                }
+            ]
+        },
+        {
+            "key": "field_dates_aaa",
+            "label": "AAA Key Dates",
+            "name": "dates_aaa",
+            "type": "repeater",
+            "layout": "table",
+            "button_label": "Add Date",
+            "sub_fields": [
+                {
+                    "key": "field_date_aaa_date",
+                    "label": "Date",
+                    "name": "date",
+                    "type": "text"
+                },
+                {
+                    "key": "field_date_aaa_event",
+                    "label": "Event",
+                    "name": "event",
+                    "type": "text"
+                }
+            ]
+        },
+        {
+            "key": "field_dates_aa",
+            "label": "AA Key Dates",
+            "name": "dates_aa",
+            "type": "repeater",
+            "layout": "table",
+            "button_label": "Add Date",
+            "sub_fields": [
+                {
+                    "key": "field_date_aa_date",
+                    "label": "Date",
+                    "name": "date",
+                    "type": "text"
+                },
+                {
+                    "key": "field_date_aa_event",
+                    "label": "Event",
+                    "name": "event",
+                    "type": "text"
+                }
+            ]
+        },
+        {
+            "key": "field_dates_nba",
+            "label": "NBA Key Dates",
+            "name": "dates_nba",
+            "type": "repeater",
+            "layout": "table",
+            "button_label": "Add Date",
+            "sub_fields": [
+                {
+                    "key": "field_date_nba_date",
+                    "label": "Date",
+                    "name": "date",
+                    "type": "text"
+                },
+                {
+                    "key": "field_date_nba_event",
+                    "label": "Event",
+                    "name": "event",
+                    "type": "text"
+                }
+            ]
+        }
+    ],
+    "location": [
+        [
+            {
+                "param": "options_page",
+                "operator": "==",
+                "value": "site-custom-settings"
+            }
+        ]
+    ],
+    "menu_order": 10,
+    "position": "normal",
+    "style": "default",
+    "label_placement": "top",
+    "instruction_placement": "label",
+    "hide_on_screen": "",
+    "active": true,
+    "description": "Manage key dates for each league."
+}

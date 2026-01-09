@@ -261,9 +261,9 @@ input[type="submit"]:disabled {
 }
 
 /* -------------------------------------------
-   Free Agent Offer Modal
+   Fantasy Modal (FA Offer & IL)
 ------------------------------------------- */
-#fa-offer-modal {
+.fantasy-modal {
     position: fixed;
     inset: 0;
     display: flex;
@@ -272,8 +272,10 @@ input[type="submit"]:disabled {
     background: rgba(15,23,42,.55);
     z-index: 100000;
 }
-#fa-offer-modal.fa-modal-hidden { display: none; }
-.fa-modal-content {
+.fantasy-modal.fa-modal-hidden {
+    display: none;
+}
+.fantasy-modal .fa-modal-content {
     position: relative;
     width: min(760px, 95vw);
     background: #fff;
@@ -282,10 +284,10 @@ input[type="submit"]:disabled {
     padding: 18px 20px 20px 20px;
     border: 1px solid #e5e7eb;
 }
-.fa-modal-content h3 {
+.fantasy-modal .fa-modal-content h3 {
     margin: 0 0 8px 0;
 }
-.fa-modal-close {
+.fantasy-modal .fa-modal-close {
     position: absolute;
     right: 10px;
     top: 8px;
@@ -293,7 +295,7 @@ input[type="submit"]:disabled {
     height: 28px;
     cursor: pointer;
 }
-.fa-modal-close::before {
+.fantasy-modal .fa-modal-close::before {
     content: "×";
     font-size: 22px;
     line-height: 28px;
@@ -301,32 +303,32 @@ input[type="submit"]:disabled {
     text-align: center;
     color: #6b7280;
 }
-#fa-modal-message {
+.fantasy-modal #fa-modal-message,
+.fantasy-modal #il-modal-message {
     margin: 6px 0 10px 0;
     color: var(--fod-error-red);
     min-height: 1em;
 }
-.fa-modal-salary-inputs {
+.fantasy-modal .fa-modal-salary-inputs {
     display: grid;
     grid-template-columns: repeat(2, minmax(200px, 1fr));
     gap: .6rem .8rem;
     margin: 10px 0 12px 0;
 }
-.fa-modal-year-input label {
+.fantasy-modal .fa-modal-year-input label {
     display: inline-block;
     width: auto;
     margin-right: .25rem;
 }
-.fa-modal-year-input input[type="number"] {
+.fantasy-modal .fa-modal-year-input input[type="number"] {
     width: 140px;
     padding: .35rem .45rem;
     border: 1px solid #d1d5db;
     border-radius: .375rem;
 }
-.fa-modal-content .button {
+.fantasy-modal .fa-modal-content .button {
     margin-right: 6px;
 }
-
 /* -------------------------------------------
    Header/logo tweaks
 ------------------------------------------- */
@@ -415,4 +417,207 @@ input[type="submit"]:disabled {
         font-size: 0.85em; /* Slightly smaller font for tighter spaces */
         padding: 6px 10px; /* Adjust padding for smaller font */
     }
+}
+
+/* -------------------------------------------
+   Homepage Dashboard Layout
+------------------------------------------- */
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr; /* One column on mobile */
+    gap: 25px;
+    margin-top: 20px;
+}
+
+.dashboard-column-main {
+    grid-column: span 1;
+}
+
+.dashboard-column-side {
+    grid-column: span 1;
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+.dashboard-widget {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 20px 25px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.dashboard-widget h3 {
+    margin-top: 0;
+    border-bottom: 2px solid var(--fod-orange-accent);
+    padding-bottom: 10px;
+}
+
+/* Style the new quick links */
+.fantasy-quick-links {
+    list-style: none;
+    margin-left: 0;
+    padding-left: 0;
+}
+.fantasy-quick-links li a {
+    display: block;
+    padding: 8px 0;
+    font-weight: bold;
+    text-decoration: none;
+    border-bottom: 1px solid #eee;
+}
+.fantasy-quick-links li:last-child a {
+    border-bottom: none;
+}
+
+/* Make the grid two columns on desktop */
+@media (min-width: 860px) {
+    .dashboard-grid {
+        /* 2/3 main column, 1/3 side column */
+        grid-template-columns: 2fr 1fr;
+    }
+}
+/* -------------------------------------------
+   Fantrax Standings Table Fix (v3 - 50/50)
+------------------------------------------- */
+
+/*
+ * Force the table to behave like a table, even in a narrow column
+ */
+.fantrax-standings-wrapper .fantasy-table-base {
+    display: table !important;
+    width: 100%;
+    table-layout: auto;
+}
+
+/*
+ * Force all cells to behave like cells, overriding mobile stacking
+ */
+.fantrax-standings-wrapper .fantasy-table-base th,
+.fantrax-standings-wrapper .fantasy-table-base td {
+    display: table-cell !important; /* This is the most important fix */
+    min-width: 0 !important;
+    width: auto;
+    padding: 10px 8px;
+    white-space: nowrap;
+    vertical-align: middle;
+    text-align: center;
+}
+
+/* Give the Team Name column priority */
+.fantrax-standings-wrapper .fantasy-table-base th:nth-child(2),
+.fantrax-standings-wrapper .fantasy-table-base td:nth-child(2) {
+    width: 40% !important; /* Force it to take space */
+    text-align: left;
+    white-space: normal !important; /* Allow wrapping */
+    font-weight: bold;
+    word-break: break-word;
+}
+
+/* Give Rank a little less space */
+.fantrax-standings-wrapper .fantasy-table-base th:nth-child(1),
+.fantrax-standings-wrapper .fantasy-table-base td:nth-child(1) {
+    width: 15%;
+}
+
+/* -------------------------------------------
+   Public Logged-Out Homepage
+------------------------------------------- */
+
+.public-login-page-wrapper {
+    display: grid;
+    grid-template-columns: 1fr; /* Single column on mobile */
+    gap: 30px;
+    align-items: center;
+    max-width: 960px;
+    margin: 40px auto;
+    padding: 20px;
+}
+
+/* On desktop, create the 50/50 split */
+@media (min-width: 768px) {
+    .public-login-page-wrapper {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.public-login-page-wrapper .login-info h2 {
+    font-size: 2.5em;
+    color: var(--fod-blue-primary);
+    margin-top: 0;
+}
+
+.public-login-page-wrapper .login-info p {
+    font-size: 1.1em;
+    color: var(--fod-gray-dark);
+}
+
+/* This is the box for the login form */
+.public-login-page-wrapper .login-form-widget {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 25px 30px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+/* Style the WordPress Login Form */
+.login-form-widget #loginform {
+    padding: 0;
+    box-shadow: none;
+    border: none;
+}
+
+.login-form-widget #loginform p {
+    margin-bottom: 15px;
+}
+
+.login-form-widget #loginform label {
+    display: block;
+    font-weight: bold;
+    color: var(--fod-gray-dark);
+    margin-bottom: 5px;
+}
+
+.login-form-widget #loginform input[type="text"],
+.login-form-widget #loginform input[type="password"] {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.login-form-widget .login-remember {
+    font-weight: normal;
+}
+.login-form-widget .login-remember label {
+    display: inline;
+    font-weight: normal;
+}
+
+.login-form-widget .login-submit input[type="submit"] {
+    width: 100%;
+    padding: 10px 15px;
+    font-size: 1.1em;
+    /* Use your brand's button colors */
+    background-color: var(--fod-orange-accent);
+    color: var(--fod-white);
+    border: 1px solid var(--fod-orange-accent);
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.login-form-widget .login-submit input[type="submit"]:hover {
+    background-color: #CF611A;
+}
+
+.login-form-widget #nav,
+.login-form-widget #backtoblog {
+    margin: 10px 0 0 0;
+    padding: 0;
+    text-align: center;
 }

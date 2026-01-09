@@ -9,8 +9,9 @@ import base64
 
 # --- Configuration ---
 CSV_FOLDER_PATH = r"C:\Users\Dan\Desktop\MLB Teams"
+# FIX: The headers are on the second row (index 1)
 HEADER_ROW_INDEX = 0
-SINGLE_FILE_TO_PROCESS = 'Moneyball Dynasty Rosters - NYM.csv'
+SINGLE_FILE_TO_PROCESS = 'Moneyball Dynasty Rosters - ATH.csv'
 LEAGUE_ID_FOR_IMPORT = 'MLB'
 # --- End Configuration ---
 
@@ -41,6 +42,14 @@ for year in CONTRACT_YEAR_COLS:
     ACF_FIELD_NAME_MAP[f'contract_{year}'] = year
 # --- End Config ---
 
+# --- Column Index Fix ---
+# Use column position (index) instead of name to avoid KeyError
+# Column T is index 21
+NAME_COLUMN_INDEX = 21
+MAN_26_COLUMN_INDEX = 3
+# --- End Column Index Fix ---
+
+
 session = requests.Session()
 credentials = f"{WORDPRESS_CONFIG['username']}:{WORDPRESS_CONFIG['app_password']}"
 token = base64.b64encode(credentials.encode())
@@ -58,27 +67,35 @@ def extract_team_id_from_filename(filename):
         return base
 
 
+def clean_salary_value(value):
+    """ Cleans contract values. """
+    if pd.isna(value):
+        return None
+    val_str = str(value).strip()
+    if re.fullmatch(r"UFA|ARB\s?\d", val_str, re.IGNORECASE):
+        return val_str
+    cleaned = re.sub(r"[^\d]", "", val_str)
+    return cleaned if cleaned else None
+
+
 def create_wp_player(player_data, config):
     """Sends data to create a new player."""
     rest_url = f"{config['base_url']}/wp-json/wp/v2/{config['player_cpt_slug']}"
     post_title = player_data.get('Name')
 
-    # Start payload with fields from the map
-    acf_payload = {acf_key: str(data_val).strip() for acf_key, data_val in player_data.items() if acf_key in ACF_FIELD_NAME_MAP and pd.notna(data_val)}
+    acf_payload = {acf_key: str(data_val).strip() for acf_key, data_val in player_data.items() if
+                   acf_key in ACF_FIELD_NAME_MAP and pd.notna(data_val)}
 
-    # Manually add the specially handled fields to the payload if they exist
     if 'dfa_only' in player_data:
         acf_payload['dfa_only'] = player_data['dfa_only']
     if 'has_been_on_40_man' in player_data:
         acf_payload['has_been_on_40_man'] = player_data['has_been_on_40_man']
     if 'rule_5_eligibility_year' in player_data:
         acf_payload['rule_5_eligibility_year'] = player_data['rule_5_eligibility_year']
+    if 'status_26_man' in player_data:
+        acf_payload['status_26_man'] = player_data['status_26_man']
 
-    # --- NEW DEBUGGING LINE ---
-    print(f"  -> FINAL ACF PAYLOAD: {acf_payload}")
-    # --- END DEBUGGING LINE ---
-
-    data = { 'title': post_title, 'status': 'publish', 'acf': acf_payload }
+    data = {'title': post_title, 'status': 'publish', 'acf': acf_payload}
 
     try:
         response = session.post(rest_url, json=data, timeout=30)
@@ -87,7 +104,10 @@ def create_wp_player(player_data, config):
         return True
     except requests.exceptions.RequestException as e:
         print(f"    -> Error creating player {post_title}: {e}")
+        if response.content:
+            print(f"       Response Body: {response.content.decode('utf-8')}")
         return False
+
 
 def process_csv_files(folder_path, league_id_value, config):
     all_files = []
@@ -96,7 +116,8 @@ def process_csv_files(folder_path, league_id_value, config):
         if os.path.exists(single_file_path):
             all_files.append(single_file_path)
         else:
-            print(f"Error: File not found: {single_file_path}"); return
+            print(f"Error: File not found: {single_file_path}");
+            return
     else:
         all_files = glob.glob(os.path.join(folder_path, "*.csv"))
 
@@ -111,15 +132,32 @@ def process_csv_files(folder_path, league_id_value, config):
         print(f"\nProcessing: {filename} (Team ID: {team_id})...")
         try:
             df_team = pd.read_csv(file_path, header=HEADER_ROW_INDEX, on_bad_lines='warn', encoding='utf-8')
-            df_team.dropna(subset=['Name'], inplace=True)
-            df_team = df_team[df_team['Name'].str.strip().ne('')]
+
+            name_col_identifier = df_team.columns[NAME_COLUMN_INDEX]
+
+            print(f"DEBUG: Rows before filtering: {len(df_team)}")
+
+            df_team.dropna(subset=[name_col_identifier], inplace=True)
+
+            print(f"DEBUG: Rows after dropna: {len(df_team)}")
+
+            df_team[name_col_identifier] = df_team[name_col_identifier].astype(str)
+
+            df_team = df_team[df_team[name_col_identifier].str.strip().ne('')]
+
+            print(f"DEBUG: Rows after strip/filter: {len(df_team)}")
 
             if df_team.empty:
                 print(f"  No valid player data in {filename} after cleaning.")
                 continue
 
+            print(f"  Found {len(df_team)} players to import for {team_id}.")
+
             for _, row in df_team.iterrows():
-                player_name = str(row.get('Name')).strip()
+                # --- KEYERROR FIX: Use iloc to get data by position ---
+                player_name = str(row.iloc[NAME_COLUMN_INDEX]).strip()
+                # --- END KEYERROR FIX ---
+
                 if not player_name: continue
 
                 player_data_for_api = {
@@ -130,19 +168,36 @@ def process_csv_files(folder_path, league_id_value, config):
                 }
 
                 for acf_key, csv_header in ACF_FIELD_NAME_MAP.items():
-                    if acf_key not in player_data_for_api and csv_header in row and pd.notna(row[csv_header]):
-                        player_data_for_api[acf_key] = row[csv_header]
+                    # Need to check if csv_header is in the actual columns
+                    # We'll trim the header name for matching
+                    trimmed_headers = {col.strip(): col for col in df_team.columns}
+                    if csv_header in trimmed_headers and pd.notna(row[trimmed_headers[csv_header]]):
+                        original_header = trimmed_headers[csv_header]
+                        if acf_key.startswith('contract_'):
+                            cleaned_val = clean_salary_value(row[original_header])
+                            if cleaned_val:
+                                player_data_for_api[acf_key] = cleaned_val
+                        elif acf_key not in player_data_for_api:
+                            player_data_for_api[acf_key] = row[original_header]
 
-                dfa_val = row.get('DFA Only', '')
+                # Get by name, trimming header just in case
+                dfa_val = row.get('DFA Only', row.get('DFA Only ', ''))
                 player_data_for_api['dfa_only'] = 1 if isinstance(dfa_val,
                                                                   str) and dfa_val.strip().lower() == 'x' else 0
 
-                # --- THIS IS THE CORRECTED LINE ---
-                ever_40_val = row.get('40-Man', '')  # Looks for '40-Man' column
+                ever_40_val = row.get('40-Man', row.get('40-Man ', ''))
                 player_data_for_api['has_been_on_40_man'] = 1 if isinstance(ever_40_val,
                                                                             str) and ever_40_val.strip().lower() == 'x' else 0
 
-                rule_5_val = row.get('Rule 5 Eligibility')
+                # --- ADD THIS NEW BLOCK ---
+                # Get 26-Man status from its column index
+                man_26_val = str(row.iloc[MAN_26_COLUMN_INDEX])
+                # This 'status_26_man' MUST match the 'Field Name' you just created
+                player_data_for_api['status_26_man'] = 1 if man_26_val.strip().lower() == 'x' else 0
+                # --- END OF NEW BLOCK ---
+
+                rule_5_val = row.get('Rule 5 Eligibility', row.get('Rule 5 Eligibility ', ''))
+                rule_5_val = row.get('Rule 5 Eligibility', row.get('Rule 5 Eligibility ', ''))
                 if pd.notna(rule_5_val) and str(rule_5_val).strip() != '':
                     try:
                         player_data_for_api['rule_5_eligibility_year'] = str(int(float(rule_5_val)))
@@ -156,6 +211,8 @@ def process_csv_files(folder_path, league_id_value, config):
                 time.sleep(0.1)
         except Exception as e:
             print(f"  FATAL Error processing file {filename}: {e}")
+            import traceback
+            traceback.print_exc()
 
     print("\nClean Import Complete.")
     print(f"Successfully CREATED: {total_created}")

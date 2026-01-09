@@ -1,266 +1,194 @@
-/* File: /wp-content/themes/twentytwentytwo-child/js/fa-modal.js */
+jQuery(document).ready(function($) {
+    console.log('FOD JS Initialized (v1.9)');
 
-/**
- * Handles:
- * - Free Agent offer modal
- * - Roster moves (Promote/Option)
- * - Waiver actions (Waive/Claim)
- */
-(function () {
-  if (!window.faModalData) return;
-
-  // ---------- Helpers ----------
-  const $ = (sel, ctx) => (ctx || document).querySelector(sel);
-  const $$ = (sel, ctx) => Array.from((ctx || document).querySelectorAll(sel));
-
-  function closest(el, selector) {
-    while (el && el.nodeType === 1) {
-      if (el.matches(selector)) return el;
-      el = el.parentElement;
-    }
-    return null;
-  }
-
-  function serialize(obj) {
-    const fd = new FormData();
-    Object.keys(obj).forEach((k) => {
-      fd.append(k, obj[k]);
-    });
-    return fd;
-  }
-
-  async function postAjax(action, payload) {
-    const body = serialize(Object.assign({ action }, payload));
-    const res = await fetch(faModalData.ajax_url, { method: "POST", body });
-    let data;
-    try {
-      data = await res.json();
-    } catch (e) {
-      data = { success: false, data: "Invalid server response." };
-    }
-    return data;
-  }
-
-  function addNotice(msg, type = "info") {
-    let box = $("#roster-notices-container") || $("#waiver-notices-container");
-    if (!box) {
-      const target = document.body;
-      box = document.createElement("div");
-      box.id = "roster-notices-container";
-      target.prepend(box);
-    }
-    const div = document.createElement("div");
-    div.className = `notice-inline notice-${type}`;
-    div.innerHTML = `
-      <span class="notice-text">${msg}</span>
-      <button type="button" class="notice-dismiss" aria-label="Dismiss">×</button>
-    `;
-    box.appendChild(div);
-    setTimeout(() => div.remove(), 8000);
-  }
-
-  // Helper function to update the 40-Man column cell text
-  function set40ManCell(row, valueText) {
-    const cells = row.querySelectorAll("td");
-    if (cells.length >= 5) {
-      cells[4].textContent = valueText || "–";
-    }
-  }
-
-  // Helper function to swap action buttons in a row
-  function replaceActionButton(row, to) {
-    const cell = row.querySelector(".player-action-cell");
-    if (!cell) return;
-    const waiveBtn = cell.querySelector(".waive-player-button");
-    $$(".promote-40-button, .option-minors-button", cell).forEach((b) => b.remove());
-
-    const meta = getRowMeta(row);
-    if (!meta) return;
-
-    if (to === "option") {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "button option-minors-button";
-      btn.textContent = "Option to Minors";
-      setBtnDataset(btn, meta);
-      if (waiveBtn) cell.insertBefore(btn, waiveBtn);
-      else cell.appendChild(btn);
-    } else if (to === "promote") {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "button promote-40-button";
-      btn.textContent = "Move to 40-Man";
-      setBtnDataset(btn, meta);
-      if (waiveBtn) cell.insertBefore(btn, waiveBtn);
-      else cell.appendChild(btn);
-    }
-  }
-
-  function getRowMeta(row) {
-    const btn = row.querySelector(".promote-40-button, .option-minors-button, .waive-player-button") || row.querySelector("button");
-    if (!btn) return null;
-    return {
-      playerId: btn.dataset.playerid,
-      playerName: btn.dataset.playername,
-      leagueId: btn.dataset.leagueid,
-      teamId: btn.dataset.teamid,
-    };
-  }
-
-  function setBtnDataset(btn, meta) {
-      btn.dataset.playerid = meta.playerId;
-      btn.dataset.playername = meta.playerName;
-      if (meta.leagueId) btn.dataset.leagueid = meta.leagueId;
-      if (meta.teamId) btn.dataset.teamid = meta.teamId;
-  }
-
-  // ---------- Modal elements ----------
-  const modal = $("#fa-offer-modal");
-  const modalTitle = $("#fa-modal-title");
-  const modalForm = $("#fa-offer-form");
-  const modalCloseX = $(".fa-modal-close");
-  const modalCancel = $(".fa-modal-cancel");
-  const modalMsg = $("#fa-modal-message");
-  const inputPlayerId = $("#fa-modal-playerid");
-  const inputLeagueId = $("#fa-modal-leagueid");
-  const inputTeamId = $("#fa-modal-teamid");
-  const inputNonce = $("#fa-modal-nonce");
-
-  function openModal() {
-    if (!modal) return;
-    modal.classList.remove("fa-modal-hidden");
-    document.body.classList.add("fa-modal-open");
-  }
-  function closeModal() {
-    if (!modal) return;
-    modal.classList.add("fa-modal-hidden");
-    document.body.classList.remove("fa-modal-open");
-    if (modalMsg) modalMsg.textContent = "";
-    if (modalForm) modalForm.reset();
-  }
-
-  if (modalCloseX) modalCloseX.addEventListener("click", closeModal);
-  if (modalCancel) modalCancel.addEventListener("click", closeModal);
-  if (modal) {
-    modal.addEventListener("click", (e) => {
-      if (e.target === modal) closeModal();
-    });
-  }
-
-  // ---------- Event delegation for all site actions ----------
-  // ---------- Event delegation for all site actions ----------
-  document.addEventListener("click", async (e) => {
-    const t = e.target; // 't' is the actual element that was clicked
-
-    // --- Free Agent Actions ---
-    if (t.matches(".fa-offer-button")) {
-      e.preventDefault();
-      // ... (logic is unchanged)
-    }
-
-    // --- Waiver Wire Actions ---
-    if (t.matches(".claim-player-button")) {
-        e.preventDefault();
-        // ... (logic is unchanged)
-    }
-
-    // --- Roster Management Actions ---
-    // The logic below is now more robust and reads data directly from the clicked button 't'
-
-    if (t.matches(".promote-40-button")) {
-      e.preventDefault();
-      t.disabled = true;
-      try {
-        const resp = await postAjax("promote_to_40man", {
-            nonce: faModalData.roster_move_nonce,
-            player_id: t.dataset.playerid
-        });
-        if (resp.success) {
-          const row = closest(t, "tr");
-          if (row) {
-            const tbody40 = $("#roster-40-tbody");
-            if (tbody40) tbody40.appendChild(row);
-            set40ManCell(row, "X");
-            replaceActionButton(row, "option");
-          }
-          addNotice(`${t.dataset.playername} moved to 40-man.`, "success");
-        } else {
-          addNotice(resp.data || "Could not move to 40-man.", "error");
-        }
-      } catch (err) {
-        addNotice("Network error moving to 40-man.", "error");
-      } finally {
-        t.disabled = false;
-      }
-      return;
-    }
-
-    if (t.matches(".option-minors-button")) {
-      e.preventDefault();
-      t.disabled = true;
-      try {
-        const resp = await postAjax("option_to_minors", {
-            nonce: faModalData.roster_move_nonce,
-            player_id: t.dataset.playerid
-        });
-        if (resp.success) {
-          const row = closest(t, "tr");
-          if (row) {
-            const tbodyMin = $("#roster-minors-tbody");
-            if (tbodyMin) tbodyMin.appendChild(row);
-            set40ManCell(row, "–");
-            replaceActionButton(row, "promote");
-          }
-          addNotice(`${t.dataset.playername} optioned to Minors.`, "success");
-        } else {
-          addNotice(resp.data || "Could not option player.", "error");
-        }
-      } catch (err) {
-        addNotice("Network error optioning player.", "error");
-      } finally {
-        t.disabled = false;
-      }
-      return;
-    }
-
-    if (t.matches(".waive-player-button")) {
-        e.preventDefault();
-        if (!confirm(`Place ${t.dataset.playername} on waivers? They will be available for other teams to claim for 24 hours.`)) {
+    // Define the calculation function in a shared scope
+    function calculateBidPoints(yearsSelect, aavInput, resultSpan) {
+        if (!yearsSelect.length || !aavInput.length || !resultSpan.length) return;
+        const aav = parseFloat(aavInput.val()) || 0;
+        const selectedOption = yearsSelect.find('option:selected');
+        if (!selectedOption.length) {
+            resultSpan.text('0.00');
             return;
         }
-        t.disabled = true;
-        try {
-            const resp = await postAjax("waive_player", {
-                nonce: faModalData.drop_player_nonce,
-                player_id: t.dataset.playerid,
-                team_id: t.dataset.teamid,
-                league_id: t.dataset.leagueid
-            });
-            if (resp.success) {
-                const row = closest(t, "tr");
-                if (row) row.remove();
-                addNotice(resp.data || `${t.dataset.playername} placed on waivers.`, "success");
-            } else {
-                addNotice(resp.data || "Could not place player on waivers.", "error");
-            }
-        } catch (err) {
-            addNotice("Network error placing player on waivers.", "error");
-        } finally {
-            t.disabled = false;
+        const years = parseInt(selectedOption.val(), 10);
+        const multiplier = parseFloat(selectedOption.data('multiplier'));
+        if (!isNaN(aav) && aav > 0 && !isNaN(years) && !isNaN(multiplier)) {
+            const points = (years * aav * multiplier) / 1000000;
+            resultSpan.text(points.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+        } else {
+            resultSpan.text('0.00');
         }
-        return;
     }
 
-    // --- General UI Actions ---
-    if (t.matches(".notice-dismiss")) {
-      // ... (logic is unchanged)
+    // --- 1. Free Agent Offer Modal ---
+    var faModal = $('#fa-offer-modal');
+    if (faModal.length) {
+        var faForm = faModal.find('#fa-offer-form');
+        var yearsSelect = faModal.find('#fa-bid-years');
+        var aavInput = faModal.find('#fa-bid-aav');
+        var resultSpan = faModal.find('#fa-bid-points-value');
+
+        $(document).on('click', '.fa-offer-button', function(e) {
+            e.preventDefault();
+            var btn = $(this);
+            faForm.find('#fa-modal-playerid').val(btn.data('playerid'));
+            faForm.find('#fa-modal-leagueid').val(btn.data('leagueid'));
+            faForm.find('#fa-modal-teamid').val(btn.data('teamid'));
+            faModal.find('#fa-modal-title').text('Place Bid for ' + btn.data('playername'));
+            faForm.find('select, input[type="number"]').val('');
+            faModal.find('#fa-modal-message').html('');
+            calculateBidPoints(yearsSelect, aavInput, resultSpan);
+
+            $.ajax({
+                url: faModalData.ajax_url,
+                type: 'POST',
+                data: { action: 'get_fa_sign_nonce', player_id: btn.data('playerid'), nonce: faModalData.get_fa_sign_nonce },
+                success: function(response) {
+                    if (response.success) {
+                        faForm.find('#fa-modal-nonce').val(response.data.nonce);
+                        faModal.removeClass('fa-modal-hidden');
+                    } else {
+                        alert('Error initializing form: ' + (response.data || 'Unknown error'));
+                    }
+                },
+                error: function() { alert('A server error occurred while preparing the bid form.'); }
+            });
+        });
+
+        yearsSelect.on('change', function() { calculateBidPoints(yearsSelect, aavInput, resultSpan); });
+        aavInput.on('input', function() { calculateBidPoints(yearsSelect, aavInput, resultSpan); });
+        faModal.find('.fa-modal-close, .fa-modal-cancel').on('click', function() { faModal.addClass('fa-modal-hidden'); });
     }
-  });
-  // ---------- Optional: smooth anchor nav for FA pagination (if present) ----------
-  document.addEventListener("click", (e) => {
-    const t = e.target;
-    if (t.closest(".fa-pagination a")) {
-      window.scrollTo({ top: 0, behavior: "smooth" });
+
+    // --- 2. Standalone Bid Calculator ---
+    var calculatorForm = $('#bid-calculator-form');
+    if (calculatorForm.length) {
+        var calcYears = calculatorForm.find('#bid-years'), calcAav = calculatorForm.find('#fa-bid-aav'), calcResult = calculatorForm.find('#bid-points-value');
+        calculateBidPoints(calcYears, calcAav, calcResult);
+        calcYears.on('change', function() { calculateBidPoints(calcYears, calcAav, calcResult); });
+        calcAav.on('input', function() { calculateBidPoints(calcYears, calcAav, calcResult); });
     }
-  });
-})();
+
+    // --- 3. IL Modal ---
+    var ilModal = $('#il-modal');
+    if (ilModal.length) {
+        $(document).on('click', '.move-to-il-button', function(e) {
+            e.preventDefault();
+            var btn = $(this);
+            $('#il-modal-playerid').val(btn.data('playerid'));
+            $('#il-modal-title').text('Place ' + btn.data('playername') + ' on IL');
+            $('#il-modal-message').html('');
+            ilModal.removeClass('fa-modal-hidden');
+        });
+
+        $('#il-submit-button').on('click', function(e) {
+            e.preventDefault();
+            var btn = $(this);
+            var data = {
+                action: 'move_player_to_il',
+                player_id: $('#il-modal-playerid').val(),
+                il_duration: $('input[name="il_duration"]:checked').val(),
+                nonce: faModalData.move_to_il_nonce
+            };
+            handleRosterAction(btn, data, function(success) {
+                if (success) ilModal.addClass('fa-modal-hidden');
+            });
+        });
+        ilModal.find('.fa-modal-close, .fa-modal-cancel').on('click', function() { ilModal.addClass('fa-modal-hidden'); });
+    }
+
+    // --- 4. DFA Modal ---
+    var dfaModal = $('#dfa-modal');
+    if (dfaModal.length) {
+        $(document).on('click', '.dfa-player-button', function(e) {
+            e.preventDefault();
+            var btn = $(this);
+            $('#dfa-modal-playerid').val(btn.data('playerid'));
+            $('#dfa-modal-title').text('Designate ' + btn.data('playername') + ' for Assignment');
+            $('#dfa-modal-message').html('');
+            dfaModal.removeClass('fa-modal-hidden');
+        });
+
+        $('#dfa-submit-button').on('click', function(e) {
+            e.preventDefault();
+            var btn = $(this);
+            var data = {
+                action: 'dfa_player',
+                player_id: $('#dfa-modal-playerid').val(),
+                dfa_action: $('input[name="dfa_action"]:checked').val(),
+                nonce: faModalData.dfa_player_nonce 
+            };
+            handleRosterAction(btn, data, function(success) {
+                if (success) dfaModal.addClass('fa-modal-hidden');
+            });
+        });
+        dfaModal.find('.fa-modal-close, .fa-modal-cancel').on('click', function() { dfaModal.addClass('fa-modal-hidden'); });
+    }
+
+    // --- 5. Generic Roster Action Handler ---
+    function handleRosterAction(btn, data, onComplete) {
+        var originalText = btn.text();
+        btn.text('Processing...').prop('disabled', true);
+
+        $.ajax({
+            url: faModalData.ajax_url,
+            type: 'POST',
+            data: data,
+            success: function(response) {
+                if (response.success) {
+                    alert(response.data.message || response.data);
+                    if (onComplete) onComplete(true);
+                    location.reload();
+                } else {
+                    alert('Error: ' + (response.data || 'Unknown error'));
+                    btn.text(originalText).prop('disabled', false);
+                    if (onComplete) onComplete(false);
+                }
+            },
+            error: function() {
+                alert('Server error. Please try again.');
+                btn.text(originalText).prop('disabled', false);
+                if (onComplete) onComplete(false);
+            }
+        });
+    }
+
+    // --- 6. Roster Button Click Delegator ---
+    $(document).on('click', '.promote-26-button, .option-minors-button, .promote-40-button, .activate-from-il-button, .claim-player-button', function(e) {
+        e.preventDefault();
+        var btn = $(this);
+        var actions = {
+            'promote-26-button': { action: 'promote_to_26man', nonce: 'promote_to_26man_nonce', msg: 'Promote this player to the active 26-man roster?' },
+            'option-minors-button': { action: 'option_to_minors', nonce: 'option_to_minors_nonce', msg: 'Option this player to the minors? This will use an option year.' },
+            'promote-40-button': { action: 'promote_to_40man', nonce: 'promote_to_40man_nonce', msg: 'Recall this player to the 40-man roster?' },
+            'activate-from-il-button': { action: 'activate_from_il', nonce: 'activate_from_il_nonce', msg: 'Activate this player from the IL?' },
+            'claim-player-button': { action: 'claim_player', nonce: 'claim_player_nonce', msg: 'Submit a waiver claim for this player?' }
+        };
+        
+        var actionConfig = null;
+        for (var cssClass in actions) {
+            if (btn.hasClass(cssClass)) {
+                actionConfig = actions[cssClass];
+                break;
+            }
+        }
+
+        if (!actionConfig || !confirm(actionConfig.msg)) return;
+
+        var nonce = faModalData[actionConfig.nonce];
+        if (!nonce) {
+            alert('Security nonce is missing for this action. Please refresh the page.');
+            return;
+        }
+
+        var data = {
+            action: actionConfig.action,
+            player_id: btn.data('playerid'),
+            league_id: btn.data('leagueid'),
+            team_id: btn.data('teamid'),
+            nonce: nonce
+        };
+        
+        handleRosterAction(btn, data);
+    });
+});

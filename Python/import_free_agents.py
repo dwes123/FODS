@@ -10,9 +10,9 @@ import time
 import base64
 
 # --- Configuration ---
-CSV_FOLDER_PATH = r"C:\Users\Dan\Desktop\Free Agents" # Your FA folder path
-LEAGUE_ID_TO_ASSIGN = 'MLB' # League ID for this import batch
-HEADER_ROW_INDEX = 0 # Headers are in the first row
+CSV_FOLDER_PATH = r"C:\Users\Dan\Desktop\Free Agents"  # Your FA folder path
+LEAGUE_ID_TO_ASSIGN = 'MLB'  # League ID for this import batch
+HEADER_ROW_INDEX = 0  # Headers are in the first row
 # --- End Configuration ---
 
 # --- WordPress Configuration ---
@@ -20,12 +20,11 @@ WORDPRESS_CONFIG = {
     'base_url': 'https://frontofficedynastysports.com',
     'username': 'djwes487',
     'app_password': 'BEVM WcEq 9xZt KPHE w5EI bYta',
-    'player_cpt_slug': 'playerdata' # CORRECTED: Points to your main player CPT
+    'player_cpt_slug': 'playerdata'
 }
 # --- End WORDPRESS Configuration ---
 
 # --- ACF Field Map (Simplified for Free Agents) ---
-# This now matches your simple FA spreadsheet
 ACF_FIELD_NAME_MAP = {
     'fa_status': 'FA Status',
     'league_id': 'League ID',
@@ -47,8 +46,11 @@ def create_wp_player(player_data, config):
     rest_url = f"{config['base_url']}/wp-json/wp/v2/{config['player_cpt_slug']}"
     post_title = player_data.get('Name')
 
-    acf_payload = {acf_key: str(data_val).strip() for acf_key, data_val in player_data.items() if acf_key in ACF_FIELD_NAME_MAP and pd.notna(data_val)}
-    data = { 'title': post_title, 'status': 'publish', 'acf': acf_payload }
+    # Build the ACF payload by filtering player_data with the map
+    acf_payload = {acf_key: str(data_val).strip() for acf_key, data_val in player_data.items() if
+                   acf_key in ACF_FIELD_NAME_MAP and pd.notna(data_val)}
+
+    data = {'title': post_title, 'status': 'publish', 'acf': acf_payload}
 
     try:
         response = session.post(rest_url, json=data, timeout=30)
@@ -59,8 +61,9 @@ def create_wp_player(player_data, config):
     except requests.exceptions.RequestException as e:
         print(f"    -> Error creating free agent {post_title}: {e}")
         if hasattr(e, 'response') and e.response is not None:
-             print(f"    -> Raw Error Response: {e.response.text}")
+            print(f"    -> Raw Error Response: {e.response.text}")
         return False
+
 
 def process_free_agent_csvs(folder_path, assigned_league_id, config):
     """Processes CSV files in the folder, treating all players as free agents."""
@@ -78,23 +81,35 @@ def process_free_agent_csvs(folder_path, assigned_league_id, config):
 
         try:
             df_fa = pd.read_csv(file_path, header=HEADER_ROW_INDEX, on_bad_lines='warn', encoding='utf-8')
+
+            # --- FIX: Proactively strip whitespace from column names ---
+            df_fa.columns = df_fa.columns.str.strip()
+
+            # Now, check for the 'Name' column
+            if 'Name' not in df_fa.columns:
+                print(f"  Error: 'Name' column not found in {filename}. Skipping file.")
+                continue
+
             df_fa.dropna(subset=['Name'], inplace=True)
-            df_fa = df_fa[df_fa['Name'].str.strip() != '']
+            df_fa = df_fa[df_fa['Name'].astype(str).str.strip() != '']
 
             if df_fa.empty:
                 print(f"  No valid player data found in {filename} after cleaning.")
                 continue
+
+            print(f"  Found {len(df_fa)} free agents to import...")
 
             for _, row in df_fa.iterrows():
                 player_name = str(row.get('Name')).strip()
                 if not player_name: continue
 
                 # --- Prepare the data for this player ---
+                # This dictionary contains all the keys that create_wp_player will use
                 player_data_for_api = {
                     'Name': player_name,
                     'league_id': assigned_league_id,
-                    'fantasy_team_id': '', # Blank for Free Agents
-                    'fa_status': 'available', # Set to 'available' as requested
+                    'fantasy_team_id': '',  # Blank for Free Agents
+                    'fa_status': 'available',  # Set to 'available'
                     'position': row.get('POS'),
                     'mlb_team': row.get('Team')
                 }
@@ -108,6 +123,8 @@ def process_free_agent_csvs(folder_path, assigned_league_id, config):
 
         except Exception as e:
             print(f"  FATAL Error processing file {filename}: {e}")
+            import traceback
+            traceback.print_exc()
 
     print("\nFree Agent Import Complete.")
     print(f"Successfully CREATED: {total_created}")

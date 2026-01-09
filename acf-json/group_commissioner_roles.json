@@ -1,0 +1,44 @@
+{
+    "key": "group_commissioner_roles",
+    "title": "User Commissioner Roles",
+    "fields": [
+        {
+            "key": "field_commissioner_of_leagues",
+            "label": "Commissioner Of",
+            "name": "commissioner_of_leagues",
+            "type": "repeater",
+            "instructions": "Assign this user as a commissioner for one or more leagues.",
+            "layout": "table",
+            "button_label": "Add League",
+            "sub_fields": [
+                {
+                    "key": "field_commissioner_league_id",
+                    "label": "League ID",
+                    "name": "league_id",
+                    "type": "select",
+                    "choices": {
+                        "MLB": "MLB",
+                        "AAA": "AAA",
+                        "AA": "AA",
+                        "NBA": "NBA"
+                    },
+                    "ui": 1
+                }
+            ]
+        }
+    ],
+    "location": [
+        [
+            {
+                "param": "user_form",
+                "operator": "==",
+                "value": "edit"
+            }
+        ]
+    ],
+    "menu_order": 20,
+    "position": "normal",
+    "style": "default",
+    "label_placement": "top",
+    "instruction_placement": "label"
+}

@@ -37,8 +37,14 @@ $table_prefix  = 'wp_';
 if ( ! defined( 'WP_DEBUG' ) ) {
     define('WP_DEBUG', false);
 }
-define('WP_DEBUG_DISPLAY', false);
-define('WP_DEBUG_LOG', true);
+
+if ( ! defined( 'WP_DEBUG_DISPLAY' ) ) {
+    define('WP_DEBUG_DISPLAY', false);
+}
+
+if ( ! defined( 'WP_DEBUG_LOG' ) ) {
+    define('WP_DEBUG_LOG', true);
+}
 
 /** Absolute path to the WordPress directory. */
 if ( !defined('ABSPATH') ) define('ABSPATH', dirname(__FILE__) . '/');
@@ -47,7 +53,7 @@ if ( !defined('ABSPATH') ) define('ABSPATH', dirname(__FILE__) . '/');
 
 // Enable query logging so Query Monitor doesn't hit null
 if ( ! defined('SAVEQUERIES') ) {
-    define('SAVEQUERIES', true);
+    define('SAVEQUERIES', false);
 }
 
 require_once ABSPATH . 'wp-settings.php';

@@ -20,7 +20,7 @@ function render_dead_cap_admin_page() {
     if ( ! current_user_can('manage_options') ) { wp_die('Not allowed'); }
 
     $q = new WP_Query(array(
-        'post_type'      => 'player',
+        'post_type'      => 'playerdata',
         'posts_per_page' => 200,
         'meta_query'     => array( array('key'=>'drop_backups','compare'=>'EXISTS') ),
         'no_found_rows'  => true,
