@@ -7,48 +7,48 @@
  */
 
 // Load ACF Options Page setup
-require_once get_stylesheet_directory() . '/inc/acf.php';
+require_once get_stylesheet_directory() . '/Inc/acf.php';
 
 // Load custom cron jobs
-require_once get_stylesheet_directory() . '/inc/cron.php';
+require_once get_stylesheet_directory() . '/Inc/cron.php';
 
 // Load script and style enqueueing
-require_once get_stylesheet_directory() . '/inc/enqueue.php';
+require_once get_stylesheet_directory() . '/Inc/enqueue.php';
 
 // Load admin-specific functionality (like the "Dead Cap Admin" page)
-require_once get_stylesheet_directory() . '/inc/admin.php';
+require_once get_stylesheet_directory() . '/Inc/admin.php';
 
 // Load Roster Helper Functions
-require_once get_stylesheet_directory() . '/inc/roster-helpers.php';
+require_once get_stylesheet_directory() . '/Inc/roster-helpers.php';
 
 // Load all theme shortcodes
-require_once get_stylesheet_directory() . '/inc/shortcodes.php';
-require_once get_stylesheet_directory() . '/inc/nba-shortcodes.php';
+require_once get_stylesheet_directory() . '/Inc/shortcodes.php';
+require_once get_stylesheet_directory() . '/Inc/nba-shortcodes.php';
 
 //Load All Transactions (MUST BE LOADED BEFORE AJAX HANDLERS)
-require_once get_stylesheet_directory() . '/inc/transactions.php';
+require_once get_stylesheet_directory() . '/Inc/transactions.php';
 
 // Load all AJAX and form submission handlers
-require_once get_stylesheet_directory() . '/inc/ajax-handlers.php';
+require_once get_stylesheet_directory() . '/Inc/ajax-handlers.php';
 
 // Load CSV Importer
-require_once get_stylesheet_directory() . '/inc/csv-importer.php';
+require_once get_stylesheet_directory() . '/Inc/csv-importer.php';
 
 // Load Player Assignment Tool
-require_once get_stylesheet_directory() . '/inc/admin-player-assign.php';
+require_once get_stylesheet_directory() . '/Inc/admin-player-assign.php';
 
 // Load Weekly Rotation System
-require_once get_stylesheet_directory() . '/inc/weekly-rotations.php';
+require_once get_stylesheet_directory() . '/Inc/weekly-rotations.php';
 
 // Load Admin Filters
-require_once get_stylesheet_directory() . '/inc/admin-filters.php';
+require_once get_stylesheet_directory() . '/Inc/admin-filters.php';
 
 // Load Admin User Columns & Filters
-require_once get_stylesheet_directory() . '/inc/admin-user-columns.php';
+require_once get_stylesheet_directory() . '/Inc/admin-user-columns.php';
 
 // Load Arbitration System
-require_once get_stylesheet_directory() . '/inc/arbitration.php';
-require_once get_stylesheet_directory() . '/inc/admin-arbitration-approval.php';
+require_once get_stylesheet_directory() . '/Inc/arbitration.php';
+require_once get_stylesheet_directory() . '/Inc/admin-arbitration-approval.php';
 
 /**
  * Register the NBA Player Custom Post Type
