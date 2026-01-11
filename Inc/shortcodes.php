@@ -1039,7 +1039,7 @@ function display_waiver_wire_shortcode() {
     echo implode(' | ', $selector_links_waiver);
     echo '</div>';
 
-    $waiver_args = [ 'post_type' => 'playerdata', 'posts_per_page' => -1, 'meta_query' => [ 'relation' => 'AND', [ 'key' => 'league_id', 'value' => $selected_league_id ], [ 'key' => 'fa_status', 'value' => 'on_waivers' ] ], 'orderby' => 'meta_value', 'meta_key' => 'waiver_end_time', 'order' => 'ASC' ];
+    $waiver_args = [ 'post_type' => 'playerdata', 'posts_per_page' => -1, 'meta_query' => [ 'relation' => 'AND', [ 'key' => 'league_id', 'value' => $selected_league_id ], [ 'key' => 'fa_status', 'value' => 'on waivers' ] ], 'orderby' => 'meta_value', 'meta_key' => 'waiver_end_time', 'order' => 'ASC' ];
     $waiver_query = new WP_Query($waiver_args);
 
     echo "<h2>Waiver Wire (" . esc_html($selected_league_id) . ")</h2>";
@@ -1184,7 +1184,7 @@ add_shortcode('league_activity_feed', 'display_league_activity_feed_shortcode');
 function display_waiver_wire_spotlight_shortcode() {
     ob_start();
     echo '<h3>Waiver Wire Spotlight</h3>';
-    $waiver_args = [ 'post_type' => 'playerdata', 'posts_per_page' => 5, 'meta_query' => [ [ 'key' => 'fa_status', 'value' => 'on_waivers' ] ], 'orderby' => 'meta_value', 'meta_key' => 'waiver_end_time', 'order' => 'ASC' ];
+    $waiver_args = [ 'post_type' => 'playerdata', 'posts_per_page' => 5, 'meta_query' => [ [ 'key' => 'fa_status', 'value' => 'on waivers' ] ], 'orderby' => 'meta_value', 'meta_key' => 'waiver_end_time', 'order' => 'ASC' ];
     $waiver_query = new WP_Query($waiver_args);
 
     if ( $waiver_query->have_posts() ) {

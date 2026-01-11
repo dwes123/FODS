@@ -1,6 +1,7 @@
 <?php
 /**
  * All AJAX and form submission handlers.
+ * Version: 2.1 (DFA Fix)
  */
 
 /**
@@ -573,7 +574,7 @@ function dfa_player_ajax_handler() {
     if ( !is_user_owner_of_player( get_current_user_id(), $player_id ) ) { wp_send_json_error('You do not have permission to manage this player.'); wp_die(); }
 
     // Set waiver status and end time
-    update_post_meta($player_id, 'fa_status', 'on_waivers');
+    update_post_meta($player_id, 'fa_status', 'on waivers');
     update_post_meta($player_id, 'waiver_end_time', date('Y-m-d H:i:s', strtotime('+48 hours')));
     update_post_meta($player_id, 'waiving_team_id', $team_id);
     update_post_meta($player_id, 'dfa_clear_action', $dfa_action);

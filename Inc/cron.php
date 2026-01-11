@@ -1,6 +1,7 @@
 <?php
 /* ------------------------------------------------------------------------
    Cron schedule for FA bid finalization
+   Version: 2.1 (DFA Fix)
 ------------------------------------------------------------------------ */
 function custom_cron_schedules( $schedules ) {
     if ( ! isset( $schedules['every_five_minutes'] ) ) {
@@ -180,7 +181,7 @@ function process_cleared_waivers_handler() {
         'no_found_rows'  => true,
         'meta_query'     => array(
             'relation' => 'AND',
-            array('key'   => 'fa_status', 'value' => 'on_waivers'),
+            array('key'   => 'fa_status', 'value' => 'on waivers'),
             array('key'     => 'waiver_end_time', 'value'   => $now_gmt, 'compare' => '<=')
         ),
     );
@@ -216,27 +217,46 @@ function process_cleared_waivers_handler() {
         $waiving_team_id = get_field('waiving_team_id', $player_id);
         $league_id = get_field('league_id', $player_id);
         $claims = get_field('pending_waiver_claims', $player_id);
+        $dfa_action = get_post_meta($player_id, 'dfa_clear_action', true);
 
         if ( empty($claims) || ! is_array($claims) ) {
-            if ($waiving_team_id) {
-                $current_year = (int) date('Y');
-                $contract_years = range($current_year, $current_year + 10);
-                foreach ($contract_years as $year) {
-                    $salary_raw = get_field('contract_' . $year, $player_id);
-                    if (is_numeric($salary_raw) && $salary_raw > 0) {
-                        $rate = ($year === $current_year) ? 0.75 : 0.50;
-                        $penalty = round($salary_raw * $rate, 0);
-                        add_row('dead_cap_penalties', array(
-                            'penalty_year'     => $year,
-                            'penalty_amount'   => (float)$penalty,
-                            'dead_cap_team_id' => $waiving_team_id,
-                            'penalty_type'     => ($year === $current_year) ? 'Cleared Waivers (75%)' : 'Cleared Waivers (50%)',
-                        ), $player_id);
-                    }
-                    update_post_meta($player_id, 'contract_' . $year, '');
+            // Player cleared waivers. Check chosen DFA action.
+            if ($dfa_action === 'minors') {
+                // Return to roster
+                update_post_meta($player_id, 'fa_status', 'rostered');
+                
+                if ( function_exists('log_league_transaction') ) {
+                    log_league_transaction([
+                        'transaction_type' => 'Roster Move',
+                        'player_ids'       => [$player_id],
+                        'primary_team'     => $waiving_team_id,
+                        'league_id'        => $league_id,
+                        'summary'          => $player_name . ' cleared waivers and was assigned to the minors by ' . $waiving_team_id . '.',
+                    ]);
                 }
+            } else {
+                // Default: Release player
+                if ($waiving_team_id) {
+                    $current_year = (int) date('Y');
+                    $contract_years = range($current_year, $current_year + 10);
+                    foreach ($contract_years as $year) {
+                        $salary_raw = get_field('contract_' . $year, $player_id);
+                        if (is_numeric($salary_raw) && $salary_raw > 0) {
+                            $rate = ($year === $current_year) ? 0.75 : 0.50;
+                            $penalty = round($salary_raw * $rate, 0);
+                            add_row('dead_cap_penalties', array(
+                                'penalty_year'     => $year,
+                                'penalty_amount'   => (float)$penalty,
+                                'dead_cap_team_id' => $waiving_team_id,
+                                'penalty_type'     => ($year === $current_year) ? 'Cleared Waivers (75%)' : 'Cleared Waivers (50%)',
+                            ), $player_id);
+                        }
+                        update_post_meta($player_id, 'contract_' . $year, '');
+                    }
+                }
+                update_post_meta($player_id, 'fa_status', 'available');
+                update_post_meta($player_id, 'fantasy_team_id', ''); // Remove from team
             }
-            update_post_meta($player_id, 'fa_status', 'available');
 
         } else {
             $winning_team_id = null;
@@ -275,6 +295,7 @@ function process_cleared_waivers_handler() {
 
         update_post_meta($player_id, 'waiving_team_id', '');
         update_post_meta($player_id, 'waiver_end_time', '');
+        update_post_meta($player_id, 'dfa_clear_action', '');
         update_field('pending_waiver_claims', [], $player_id);
 
     }

@@ -9,7 +9,7 @@ $remote_theme_path = "htdocs/wp-content/themes/twentytwentytwo-child"
 $items_to_sync = @(
     "functions.php",
     "style.css",
-    "inc",
+    "Inc",
     "JS",
     "acf-json"
 )
