@@ -50,6 +50,9 @@ require_once get_stylesheet_directory() . '/inc/admin-user-columns.php';
 require_once get_stylesheet_directory() . '/inc/arbitration.php';
 require_once get_stylesheet_directory() . '/inc/admin-arbitration-approval.php';
 
+// Load Mobile API Endpoints
+require_once get_stylesheet_directory() . '/inc/api-endpoints.php';
+
 /**
  * Register the NBA Player Custom Post Type
  */
