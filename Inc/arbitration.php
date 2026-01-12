@@ -165,10 +165,22 @@ function fod_display_arbitration_form_shortcode($atts) {
                                     <strong style="color: #e69c00;">Pending Commissioner Approval</strong>
                                 <?php else: ?>
                                     <div style="display:flex; flex-direction: column; gap: 10px;">
-                                        <div>
+                                        <div class="arb-one-year-option">
                                             <label>
                                                 $ <input type="number" name="players[<?php echo $player['id']; ?>][amount]" placeholder="Enter Amount" min="0" style="margin-left:5px;">
                                             </label>
+                                        </div>
+                                        <div class="arb-extension-option">
+                                            <button type="button" class="button button-secondary toggle-extension-btn" data-playerid="<?php echo $player['id']; ?>">Agreed to Extension</button>
+                                            <div id="extension-fields-<?php echo $player['id']; ?>" class="extension-fields" style="display:none; margin-top:10px; background:#f9f9f9; padding:10px; border:1px solid #ddd;">
+                                                <strong>Multi-Year Contract:</strong><br>
+                                                <?php for($y = (int)$target_year; $y <= (int)$target_year + 5; $y++): ?>
+                                                    <div style="margin-bottom:5px;">
+                                                        <label style="font-size:12px;"><?php echo $y; ?>: </label>
+                                                        <input type="number" name="players[<?php echo $player['id']; ?>][multi][<?php echo $y; ?>]" placeholder="Amount" style="width:100px;">
+                                                    </div>
+                                                <?php endfor; ?>
+                                            </div>
                                         </div>
                                         <div>
                                             <label>
@@ -187,6 +199,27 @@ function fod_display_arbitration_form_shortcode($atts) {
             <p class="submit">
                 <button type="submit" class="button button-primary">Submit Decisions</button>
             </p>
+            <script>
+            document.addEventListener('click', function(e) {
+                if (e.target && e.target.classList.contains('toggle-extension-btn')) {
+                    e.preventDefault();
+                    var pid = e.target.getAttribute('data-playerid');
+                    var fields = document.getElementById('extension-fields-' + pid);
+                    var row = e.target.closest('tr');
+                    var oneYearOption = row.querySelector('.arb-one-year-option');
+
+                    if (fields.style.display === 'none') {
+                        fields.style.display = 'block';
+                        oneYearOption.style.display = 'none';
+                        e.target.textContent = 'Cancel Extension';
+                    } else {
+                        fields.style.display = 'none';
+                        oneYearOption.style.display = 'block';
+                        e.target.textContent = 'Agreed to Extension';
+                    }
+                }
+            });
+            </script>
         </form>
         <?php
     }
@@ -213,8 +246,13 @@ function fod_handle_arbitration_submission() {
 
     if ( is_array($players_data) ) {
         foreach ($players_data as $pid => $data) {
-            $amount = $data['amount'];
+            $amount = isset($data['amount']) ? $data['amount'] : '';
             $decline = isset($data['decline']) && $data['decline'] == '1';
+            
+            // Filter multi-year data to only include numeric amounts > 0
+            $multi_data = isset($data['multi']) ? array_filter($data['multi'], function($val) {
+                return is_numeric($val) && $val > 0;
+            }) : [];
 
             $player_name = sanitize_text_field($data['name']);
             $team_id = sanitize_text_field($data['team']);
@@ -237,7 +275,7 @@ function fod_handle_arbitration_submission() {
                 }
                 $updated_count++;
 
-            } elseif ( is_numeric($amount) && $amount > 0 ) {
+            } elseif ( (is_numeric($amount) && $amount > 0) || !empty($multi_data) ) {
                 // Check for existing pending arbitration post for this player/year
                 $pending_args = [
                     'post_type' => 'pending_arb',
@@ -255,9 +293,11 @@ function fod_handle_arbitration_submission() {
                 if ($post_id) {
                     // Update existing pending post
                     update_post_meta($post_id, 'salary_amount', $amount);
+                    if (!empty($multi_data)) update_post_meta($post_id, 'multi_year_contract', $multi_data);
                 } else {
                     // Create new pending post
-                    $post_title = "ARB: $player_name ($team_id) - $$amount for $target_year";
+                    $display_val = !empty($multi_data) ? "Extension" : "$$amount";
+                    $post_title = "ARB: $player_name ($team_id) - $display_val for $target_year";
                     $post_id = wp_insert_post([
                         'post_type' => 'pending_arb',
                         'post_title' => $post_title,
@@ -272,6 +312,7 @@ function fod_handle_arbitration_submission() {
                     update_post_meta($post_id, 'league_id', $league_id);
                     update_post_meta($post_id, 'target_year', $target_year);
                     update_post_meta($post_id, 'salary_amount', $amount);
+                    if (!empty($multi_data)) update_post_meta($post_id, 'multi_year_contract', $multi_data);
                     update_post_meta($post_id, 'approval_status', 'pending');
                     
                     // Mark the player as pending

@@ -76,10 +76,10 @@ function twentytwentytwo_child_enqueue_styles() {
         );
     }
 
-    // --- NEW: Load jQuery for Rotation Submission Page ---
+    // --- NEW: Load jQuery for Rotation & Arbitration Submission Pages ---
     if ( function_exists('get_post') ) {
         $post = get_post();
-        if ( $post && has_shortcode( $post->post_content, 'submit_rotation' ) ) {
+        if ( $post && (has_shortcode( $post->post_content, 'submit_rotation' ) || has_shortcode( $post->post_content, 'arbitration_acceptance_form' )) ) {
             wp_enqueue_script('jquery');
         }
     }

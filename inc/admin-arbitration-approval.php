@@ -57,10 +57,23 @@ function fod_render_arb_approval_page() {
                 $year = get_post_meta($post_id, 'target_year', true);
                 $amount = get_post_meta($post_id, 'salary_amount', true);
                 $team_id = get_post_meta($post_id, 'team_id', true);
+                $multi = get_post_meta($post_id, 'multi_year_contract', true);
                 
-                if ($pid && $year && $amount) {
-                    update_post_meta($pid, 'contract_' . $year, $amount);
-                    
+                if ($pid) {
+                    $summary_details = "";
+                    if ( is_array($multi) && !empty($multi) ) {
+                        // Apply Multi-Year Contract
+                        foreach ($multi as $yr => $amt) {
+                            update_post_meta($pid, 'contract_' . $yr, $amt);
+                            $summary_details .= "$yr: $" . number_format($amt) . ", ";
+                        }
+                        $summary_details = rtrim($summary_details, ", ");
+                    } elseif ($year && $amount) {
+                        // Apply Single Year Arb
+                        update_post_meta($pid, 'contract_' . $year, $amount);
+                        $summary_details = "$year: $" . number_format($amount);
+                    }
+
                     // Log Transaction
                     if ( function_exists('log_league_transaction') ) {
                         $p_name = get_the_title($pid);
@@ -69,7 +82,7 @@ function fod_render_arb_approval_page() {
                             'player_ids'       => [$pid],
                             'primary_team'     => $team_id,
                             'league_id'        => $item_league,
-                            'summary'          => "Arbitration APPROVED for $p_name ($team_id): $" . number_format($amount) . " for $year."
+                            'summary'          => "Arbitration/Extension APPROVED for $p_name ($team_id). Contract details: $summary_details."
                         ]);
                     }
                     
@@ -136,7 +149,17 @@ function fod_render_arb_approval_page() {
                         $team = get_post_meta($id, 'team_id', true);
                         $year = get_post_meta($id, 'target_year', true);
                         $amount = get_post_meta($id, 'salary_amount', true);
+                        $multi = get_post_meta($id, 'multi_year_contract', true);
                         
+                        $display_amount = '';
+                        if ( is_array($multi) && !empty($multi) ) {
+                            foreach ($multi as $yr => $amt) {
+                                $display_amount .= "<strong>$yr:</strong> $" . number_format((float)$amt) . "<br>";
+                            }
+                        } else {
+                            $display_amount = "$" . number_format((float)$amount);
+                        }
+
                         $approve_url = add_query_arg(['action'=>'approve', 'id'=>$id, '_wpnonce'=>wp_create_nonce('arb_action_'.$id)]);
                         $reject_url = add_query_arg(['action'=>'reject', 'id'=>$id, '_wpnonce'=>wp_create_nonce('arb_action_'.$id)]);
                     ?>
@@ -146,7 +169,7 @@ function fod_render_arb_approval_page() {
                         <td><?php echo esc_html($team); ?></td>
                         <td><strong><?php echo get_the_title($pid); ?></strong></td>
                         <td><?php echo esc_html($year); ?></td>
-                        <td>$<?php echo number_format((float)$amount); ?></td>
+                        <td><?php echo $display_amount; ?></td>
                         <td>
                             <a href="<?php echo esc_url($approve_url); ?>" class="button button-primary">Approve</a>
                             <a href="<?php echo esc_url($reject_url); ?>" class="button button-secondary" style="color: #b32d2e; border-color: #b32d2e;">Reject</a>
