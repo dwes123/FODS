@@ -77,8 +77,16 @@ function fod_render_arb_approval_page() {
                     $message = "Request approved and processed.";
                 }
             } elseif ( $action === 'reject' ) {
+                $pid = get_post_meta($post_id, 'player_id', true);
+                $year = get_post_meta($post_id, 'target_year', true);
+                
+                if ($pid && $year) {
+                    // Reset the status on the player so the manager can try again
+                    update_post_meta($pid, 'arb_status_' . $year, '');
+                }
+
                 wp_delete_post($post_id, true);
-                $message = "Request rejected and deleted.";
+                $message = "Request rejected and deleted. Player status has been reset for resubmission.";
             }
         } else {
             $message = "Error: You do not have permission to manage this league.";
