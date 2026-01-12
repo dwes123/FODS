@@ -12,13 +12,56 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Register the custom routes
  */
 function fod_register_rest_routes() {
+    // 1. Get User's Managed Teams
+    register_rest_route( 'fod/v1', '/my-teams', array(
+        'methods'  => 'GET',
+        'callback' => 'fod_get_user_teams',
+        'permission_callback' => function() { return is_user_logged_in(); }
+    ));
+
+    // 2. Roster Data
     register_rest_route( 'fod/v1', '/roster/(?P<league>[a-zA-Z0-9-]+)/(?P<team>[a-zA-Z0-9-]+)', array(
         'methods'  => 'GET',
         'callback' => 'fod_get_remote_roster',
-        'permission_callback' => '__return_true', // In production, we would use token-based auth
+        'permission_callback' => '__return_true',
+    ));
+
+    // 3. Waiver Wire
+    register_rest_route( 'fod/v1', '/waivers/(?P<league>[a-zA-Z0-9-]+)', array(
+        'methods'  => 'GET',
+        'callback' => 'fod_get_remote_waivers',
+        'permission_callback' => '__return_true',
+    ));
+
+    // 4. Free Agents (with Search)
+    register_rest_route( 'fod/v1', '/free-agents/(?P<league>[a-zA-Z0-9-]+)', array(
+        'methods'  => 'GET',
+        'callback' => 'fod_get_remote_free_agents',
+        'permission_callback' => '__return_true',
+    ));
+
+    // 5. Activity Feed
+    register_rest_route( 'fod/v1', '/activity/(?P<league>[a-zA-Z0-9-]+)', array(
+        'methods'  => 'GET',
+        'callback' => 'fod_get_remote_activity',
+        'permission_callback' => '__return_true',
     ));
 }
 add_action( 'rest_api_init', 'fod_register_rest_routes' );
+
+/**
+ * Get the teams managed by the currently logged-in user
+ */
+function fod_get_user_teams() {
+    $user_id = get_current_user_id();
+    $mlb = get_field('managed_teams', 'user_' . $user_id) ?: [];
+    $nba = get_field('managed_nba_teams', 'user_' . $user_id) ?: [];
+    
+    return rest_ensure_response([
+        'mlb_leagues' => $mlb,
+        'nba_leagues' => $nba
+    ]);
+}
 
 /**
  * Callback to fetch roster data for a specific league and team
@@ -28,7 +71,7 @@ function fod_get_remote_roster( $data ) {
     $team_id   = strtoupper(sanitize_text_field($data['team']));
 
     $args = [
-        'post_type'      => 'playerdata',
+        'post_type'      => ($league_id === 'NBA') ? 'nbaplayer' : 'playerdata',
         'posts_per_page' => -1,
         'meta_query'     => [
             'relation' => 'AND',
@@ -45,7 +88,6 @@ function fod_get_remote_roster( $data ) {
             $query->the_post();
             $pid = get_the_ID();
             
-            // Collect salary data for the next few years
             $contracts = [];
             foreach (range(2026, 2030) as $year) {
                 $salary = get_post_meta($pid, 'contract_' . $year, true);
@@ -59,16 +101,116 @@ function fod_get_remote_roster( $data ) {
                 'mlb_team'     => get_post_meta($pid, 'mlb_team', true),
                 'status_40'    => get_post_meta($pid, 'status_40_man', true) === 'X',
                 'status_26'    => get_post_meta($pid, 'status_26_man', true) == '1',
+                'status_il'    => get_post_meta($pid, 'status_il', true),
                 'fa_status'    => get_post_meta($pid, 'fa_status', true),
                 'contracts'    => $contracts
             ];
         }
     }
     wp_reset_postdata();
-
-    if (empty($roster)) {
-        return new WP_Error('no_roster', 'No players found for this team/league', ['status' => 404]);
-    }
-
     return rest_ensure_response($roster);
+}
+
+/**
+ * Fetch players currently on waivers
+ */
+function fod_get_remote_waivers( $data ) {
+    $league_id = strtoupper(sanitize_text_field($data['league']));
+    
+    $args = [
+        'post_type' => 'playerdata',
+        'posts_per_page' => -1,
+        'meta_query' => [
+            'relation' => 'AND',
+            ['key' => 'league_id', 'value' => $league_id],
+            ['key' => 'fa_status', 'value' => 'on waivers']
+        ]
+    ];
+
+    $query = new WP_Query($args);
+    $players = [];
+
+    if ($query->have_posts()) {
+        while ($query->have_posts()) {
+            $query->the_post();
+            $pid = get_the_ID();
+            $players[] = [
+                'id'           => $pid,
+                'name'         => get_the_title(),
+                'position'     => get_post_meta($pid, 'position', true),
+                'waiving_team' => get_post_meta($pid, 'waiving_team_id', true),
+                'end_time'     => get_post_meta($pid, 'waiver_end_time', true)
+            ];
+        }
+    }
+    wp_reset_postdata();
+    return rest_ensure_response($players);
+}
+
+/**
+ * Fetch available free agents with optional search
+ */
+function fod_get_remote_free_agents( $data ) {
+    $league_id = strtoupper(sanitize_text_field($data['league']));
+    $search    = isset($_GET['s']) ? sanitize_text_field($_GET['s']) : '';
+    
+    $args = [
+        'post_type'      => 'playerdata',
+        'posts_per_page' => 50,
+        's'              => $search,
+        'meta_query'     => [
+            'relation' => 'AND',
+            ['key' => 'league_id', 'value' => $league_id],
+            ['key' => 'fa_status', 'value' => ['available', 'pending_bid'], 'compare' => 'IN']
+        ]
+    ];
+
+    $query = new WP_Query($args);
+    $fa = [];
+
+    if ($query->have_posts()) {
+        while ($query->have_posts()) {
+            $query->the_post();
+            $pid = get_the_ID();
+            $fa[] = [
+                'id'           => $pid,
+                'name'         => get_the_title(),
+                'position'     => get_post_meta($pid, 'position', true),
+                'current_bid'  => get_post_meta($pid, 'pending_bid_amount', true),
+                'end_time'     => get_post_meta($pid, 'bid_end_time', true)
+            ];
+        }
+    }
+    wp_reset_postdata();
+    return rest_ensure_response($fa);
+}
+
+/**
+ * Fetch recent league activity
+ */
+function fod_get_remote_activity( $data ) {
+    $league_id = strtoupper(sanitize_text_field($data['league']));
+    
+    $args = [
+        'post_type'      => 'transaction',
+        'posts_per_page' => 20,
+        'meta_query'     => [
+            ['key' => 'league_id', 'value' => $league_id]
+        ]
+    ];
+
+    $query = new WP_Query($args);
+    $activity = [];
+
+    if ($query->have_posts()) {
+        while ($query->have_posts()) {
+            $query->the_post();
+            $activity[] = [
+                'date'    => get_the_date('Y-m-d H:i'),
+                'summary' => get_field('transaction_summary')
+            ];
+        }
+    }
+    wp_reset_postdata();
+    return rest_ensure_response($activity);
 }
