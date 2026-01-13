@@ -16,6 +16,7 @@ class _WaiversScreenState extends State<WaiversScreen> {
   @override
   void initState() {
     super.initState();
+    print('Initializing WaiversScreen for league: ${widget.league}');
     _waiversFuture = ApiService.fetchWaivers(widget.league);
   }
 
@@ -33,8 +34,13 @@ class _WaiversScreenState extends State<WaiversScreen> {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text('Error: ${snapshot.error}', textAlign: TextAlign.center),
+              ),
+            );
+          } else if (!snapshot.hasData || (snapshot.data as List).isEmpty) {
             return const Center(child: Text('No players on waivers.'));
           }
 

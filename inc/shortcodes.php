@@ -1728,3 +1728,46 @@ function display_all_transactions_shortcode() {
     return ob_get_clean();
 }
 add_shortcode( 'all_transactions', 'display_all_transactions_shortcode' );
+
+/* ------------------------------------------------------------------------
+   [luxury_tax_status] — Displays team status relative to the luxury tax
+------------------------------------------------------------------------ */
+function display_luxury_tax_status_shortcode( $atts ) {
+    $atts = shortcode_atts([
+        'league' => 'MLB',
+        'team'   => '',
+        'year'   => date('Y'),
+    ], $atts);
+
+    if ( empty($atts['team']) ) { return '<!-- No team specified for luxury tax status -->'; }
+
+    $payroll = fod_get_total_team_payroll( $atts['league'], $atts['team'], $atts['year'] );
+    $limit   = fod_get_luxury_tax_limit( $atts['year'] );
+
+    if ( $limit <= 0 ) { return '<!-- No luxury tax limit set for ' . esc_html($atts['year']) . ' -->'; }
+
+    $diff = $limit - $payroll;
+    $status_class = ( $diff < 0 ) ? 'over-tax' : 'under-tax';
+    $status_color = ( $diff < 0 ) ? '#d9534f' : '#5cb85c';
+
+    ob_start();
+    ?>
+    <div class="luxury-tax-status-box <?php echo esc_attr($status_class); ?>" style="border: 1px solid #ddd; padding: 15px; border-radius: 5px; background: #fdfdfd; display: inline-block; min-width: 250px;">
+        <h4 style="margin: 0 0 10px 0; font-size: 1.1em; border-bottom: 1px solid #eee; padding-bottom: 5px;">Luxury Tax Status (<?php echo esc_html($atts['year']); ?>)</h4>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+            <span>Total Payroll:</span>
+            <strong>$<?php echo number_format($payroll, 0); ?></strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+            <span>Tax Limit:</span>
+            <strong>$<?php echo number_format($limit, 0); ?></strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 10px;">
+            <span><?php echo ($diff < 0) ? 'Tax Penalty Space:' : 'Tax Space Remaining:'; ?></span>
+            <strong style="color: <?php echo $status_color; ?>;">$<?php echo number_format(abs($diff), 0); ?></strong>
+        </div>
+    </div>
+    <?php
+    return ob_get_clean();
+}
+add_shortcode( 'luxury_tax_status', 'display_luxury_tax_status_shortcode' );

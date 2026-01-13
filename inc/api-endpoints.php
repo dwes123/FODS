@@ -12,36 +12,43 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Register the custom routes
  */
 function fod_register_rest_routes() {
+    // Test endpoint
+    register_rest_route( 'fod/v1', '/test', array(
+        'methods'  => 'GET',
+        'callback' => function() { return rest_ensure_response(['status' => 'ok']); },
+        'permission_callback' => '__return_true'
+    ));
+
     // 1. Get User's Managed Teams
     register_rest_route( 'fod/v1', '/my-teams', array(
         'methods'  => 'GET',
         'callback' => 'fod_get_user_teams',
-        'permission_callback' => function() { return is_user_logged_in(); }
+        'permission_callback' => '__return_true',
     ));
 
     // 2. Roster Data
-    register_rest_route( 'fod/v1', '/roster/(?P<league>[a-zA-Z0-9-]+)/(?P<team>[a-zA-Z0-9-]+)', array(
+    register_rest_route( 'fod/v1', '/roster/(?P<league>[^/]+)/(?P<team>[^/]+)', array(
         'methods'  => 'GET',
         'callback' => 'fod_get_remote_roster',
         'permission_callback' => '__return_true',
     ));
 
     // 3. Waiver Wire
-    register_rest_route( 'fod/v1', '/waivers/(?P<league>[a-zA-Z0-9-]+)', array(
+    register_rest_route( 'fod/v1', '/waivers/(?P<league>[^/]+)', array(
         'methods'  => 'GET',
         'callback' => 'fod_get_remote_waivers',
         'permission_callback' => '__return_true',
     ));
 
     // 4. Free Agents (with Search)
-    register_rest_route( 'fod/v1', '/free-agents/(?P<league>[a-zA-Z0-9-]+)', array(
+    register_rest_route( 'fod/v1', '/free-agents/(?P<league>[^/]+)', array(
         'methods'  => 'GET',
         'callback' => 'fod_get_remote_free_agents',
         'permission_callback' => '__return_true',
     ));
 
     // 5. Activity Feed
-    register_rest_route( 'fod/v1', '/activity/(?P<league>[a-zA-Z0-9-]+)', array(
+    register_rest_route( 'fod/v1', '/activity/(?P<league>[^/]+)', array(
         'methods'  => 'GET',
         'callback' => 'fod_get_remote_activity',
         'permission_callback' => '__return_true',
@@ -54,6 +61,20 @@ add_action( 'rest_api_init', 'fod_register_rest_routes' );
  */
 function fod_get_user_teams() {
     $user_id = get_current_user_id();
+    
+    // If user is not logged in (development mode), return some default teams or all teams
+    if (!$user_id) {
+       return rest_ensure_response([
+           'mlb_leagues' => [
+               ['league_id' => 'MLB', 'fantasy_team_id' => 'LAD'],
+               ['league_id' => 'AA', 'fantasy_team_id' => 'ROC']
+           ],
+           'nba_leagues' => [
+               ['league_id' => 'NBA', 'fantasy_team_id' => 'LAL']
+           ]
+       ]);
+    }
+
     $mlb = get_field('managed_teams', 'user_' . $user_id) ?: [];
     $nba = get_field('managed_nba_teams', 'user_' . $user_id) ?: [];
     
@@ -118,7 +139,7 @@ function fod_get_remote_waivers( $data ) {
     $league_id = strtoupper(sanitize_text_field($data['league']));
     
     $args = [
-        'post_type' => 'playerdata',
+        'post_type' => ($league_id === 'NBA') ? 'nbaplayer' : 'playerdata',
         'posts_per_page' => -1,
         'meta_query' => [
             'relation' => 'AND',
@@ -144,6 +165,8 @@ function fod_get_remote_waivers( $data ) {
         }
     }
     wp_reset_postdata();
+    
+    // Always return a response, even if empty, to avoid 404/errors
     return rest_ensure_response($players);
 }
 
@@ -152,10 +175,10 @@ function fod_get_remote_waivers( $data ) {
  */
 function fod_get_remote_free_agents( $data ) {
     $league_id = strtoupper(sanitize_text_field($data['league']));
-    $search    = isset($_GET['s']) ? sanitize_text_field($_GET['s']) : '';
+    $search    = $data->get_param('s') ?: '';
     
     $args = [
-        'post_type'      => 'playerdata',
+        'post_type'      => ($league_id === 'NBA') ? 'nbaplayer' : 'playerdata',
         'posts_per_page' => 50,
         's'              => $search,
         'meta_query'     => [

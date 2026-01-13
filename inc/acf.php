@@ -134,6 +134,51 @@ if( function_exists('acf_add_local_field_group') ) {
         'description' => 'Manage key dates for each league.',
     ));
 
+    // League Thresholds (Luxury Tax, etc.)
+    acf_add_local_field_group(array(
+        'key' => 'group_league_thresholds',
+        'title' => 'League Thresholds',
+        'fields' => array(
+            array(
+                'key' => 'field_luxury_tax_thresholds',
+                'label' => 'Luxury Tax Thresholds',
+                'name' => 'luxury_tax_thresholds',
+                'type' => 'repeater',
+                'instructions' => 'Set the luxury tax limit for each year.',
+                'layout' => 'table',
+                'button_label' => 'Add Year',
+                'sub_fields' => array(
+                    array(
+                        'key' => 'field_tax_year',
+                        'label' => 'Year',
+                        'name' => 'year',
+                        'type' => 'number',
+                        'placeholder' => 'e.g. 2026',
+                    ),
+                    array(
+                        'key' => 'field_tax_limit',
+                        'label' => 'Tax Limit',
+                        'name' => 'limit',
+                        'type' => 'number',
+                        'prepend' => '$',
+                        'default_value' => 241000000,
+                    ),
+                ),
+            ),
+        ),
+        'location' => array(
+            array(
+                array(
+                    'param' => 'options_page',
+                    'operator' => '==',
+                    'value' => 'site-custom-settings',
+                ),
+            ),
+        ),
+        'menu_order' => 12, // Between Key Dates and Financials
+        'active' => true,
+    ));
+
     // Team Financials (ISBP Balances)
     acf_add_local_field_group(array(
         'key' => 'group_team_financials',

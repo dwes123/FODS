@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import 'player_details_screen.dart';
 
 class RosterScreen extends StatefulWidget {
   final String league;
@@ -54,7 +55,12 @@ class _RosterScreenState extends State<RosterScreen> {
                 subtitle: Text(player['status_40'] ? '40-Man Roster' : 'Minors'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
-                  // View player details
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PlayerDetailsScreen(player: player),
+                    ),
+                  );
                 },
               );
             },

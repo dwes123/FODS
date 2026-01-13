@@ -9,6 +9,64 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
+ * Retrieves the Luxury Tax limit for a specific year from the options page.
+ *
+ * @param int|string $year
+ * @return float
+ */
+function fod_get_luxury_tax_limit( $year ) {
+    $thresholds = get_field( 'luxury_tax_thresholds', 'option' );
+    if ( is_array( $thresholds ) ) {
+        foreach ( $thresholds as $row ) {
+            if ( (int) $row['year'] === (int) $year ) {
+                return (float) $row['limit'];
+            }
+        }
+    }
+    return 0.0;
+}
+
+/**
+ * Calculates total payroll (Active + Dead Cap) for a team in a specific year.
+ *
+ * @param string $league_id
+ * @param string $team_id
+ * @param int    $year
+ * @return float
+ */
+function fod_get_total_team_payroll( $league_id, $team_id, $year ) {
+    $active_total = 0.0;
+
+    $args = [
+        'post_type'      => 'playerdata',
+        'posts_per_page' => -1,
+        'no_found_rows'  => true,
+        'meta_query'     => [
+            'relation' => 'AND',
+            [ 'key' => 'league_id', 'value' => $league_id ],
+            [ 'key' => 'fantasy_team_id', 'value' => $team_id ],
+        ],
+    ];
+
+    $query = new WP_Query( $args );
+    if ( $query->have_posts() ) {
+        while ( $query->have_posts() ) {
+            $query->the_post();
+            $salary = get_post_meta( get_the_ID(), 'contract_' . $year, true );
+            if ( is_numeric( $salary ) ) {
+                $active_total += (float) $salary;
+            }
+        }
+    }
+    wp_reset_postdata();
+
+    $dead_cap_data = fod_calculate_dead_cap( $league_id, $team_id, [ $year ] );
+    $dead_cap_total = $dead_cap_data['totals'][ $year ] ?? 0.0;
+
+    return $active_total + $dead_cap_total;
+}
+
+/**
  * Helper function to sort player IDs by custom baseball position order.
  */
 function fod_sort_players_by_position( $player_ids ) {
@@ -224,6 +282,29 @@ function fod_render_salary_summary_table( $salary_totals, $dead_cap_totals, $yea
                 <?php foreach ( $years_to_process as $y ) : ?>
                     <?php $tot = ( $salary_totals[ $y ] ?? 0 ) + ( $dead_cap_totals[ $y ] ?? 0 ); ?>
                     <td>$<?php echo esc_html( number_format( $tot, 0 ) ); ?></td>
+                <?php endforeach; ?>
+            </tr>
+            <tr class="luxury-tax-row" style="border-top: 2px solid #ccc; font-weight: bold;">
+                <td>Luxury Tax Limit</td>
+                <?php foreach ( $years_to_process as $y ) : ?>
+                    <?php $limit = fod_get_luxury_tax_limit( $y ); ?>
+                    <td>$<?php echo ( $limit > 0 ) ? esc_html( number_format( $limit, 0 ) ) : '–'; ?></td>
+                <?php endforeach; ?>
+            </tr>
+            <tr>
+                <td>Tax Space (+/-)</td>
+                <?php foreach ( $years_to_process as $y ) : ?>
+                    <?php 
+                        $tot = ( $salary_totals[ $y ] ?? 0 ) + ( $dead_cap_totals[ $y ] ?? 0 );
+                        $limit = fod_get_luxury_tax_limit( $y );
+                        if ( $limit > 0 ) {
+                            $diff = $limit - $tot;
+                            $color = ( $diff < 0 ) ? 'red' : 'green';
+                            echo '<td style="color:' . $color . ';">$' . number_format( $diff, 0 ) . '</td>';
+                        } else {
+                            echo '<td>–</td>';
+                        }
+                    ?>
                 <?php endforeach; ?>
             </tr>
         </tbody>
