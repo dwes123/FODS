@@ -206,7 +206,7 @@ function fod_calculate_dead_cap( $league_id, $team_id, $years_to_process ) {
         'meta_query'     => [
             'relation' => 'AND',
             [ 'key' => 'league_id', 'value' => $league_id ],
-            [ 'key' => 'dead_cap_penalties_$_dead_cap_team_id', 'value' => $team_id ],
+            [ 'key' => 'dead_cap_penalties', 'compare' => 'EXISTS' ],
         ],
     ];
 
@@ -221,9 +221,10 @@ function fod_calculate_dead_cap( $league_id, $team_id, $years_to_process ) {
                 foreach ( $penalties as $row ) {
                     $yr  = isset( $row['penalty_year'] ) ? (int) $row['penalty_year'] : 0;
                     $amt = isset( $row['penalty_amount'] ) ? (float) $row['penalty_amount'] : 0.0;
-                    $tid = $row['dead_cap_team_id'] ?? '';
+                    $tid = isset( $row['dead_cap_team_id'] ) ? trim(strtoupper($row['dead_cap_team_id'])) : '';
                     $typ = $row['penalty_type'] ?? '';
-                    if ( $tid === $team_id && $yr && isset( $dead_cap_totals[ $yr ] ) ) {
+                    
+                    if ( $tid === strtoupper(trim($team_id)) && $yr && isset( $dead_cap_totals[ $yr ] ) ) {
                         $dead_cap_totals[ $yr ] += $amt;
                         $grouped_dead_cap[ $yr ][] = [
                             'player' => get_the_title( $p_id ),

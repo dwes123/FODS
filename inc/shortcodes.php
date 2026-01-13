@@ -209,13 +209,12 @@ function display_manager_roster_shortcode() {
     if ( ! empty($grouped_dead_cap) ) {
         krsort($grouped_dead_cap);
         echo '<h3>Dead Cap Breakdown</h3>';
-        echo '<table class="fantasy-table-base deadcap-breakdown"><thead><tr><th>Year</th><th>Player</th><th>Amount</th><th>Type</th></tr></thead><tbody>';
+        echo '<table class="fantasy-table-base deadcap-breakdown"><thead><tr><th>Year</th><th>Player</th><th>Amount</th></tr></thead><tbody>';
         foreach ( $grouped_dead_cap as $year => $penalties ) {
             usort($penalties, function($a, $b) { return $b['amount'] <=> $a['amount']; });
             $players_html = implode('<br>', array_map('esc_html', array_column($penalties, 'player')));
             $amounts_html = implode('<br>', array_map(function($p) { return '$' . number_format($p['amount'], 0); }, $penalties));
-            $types_html = implode('<br>', array_map('esc_html', array_column($penalties, 'type')));
-            echo '<tr><td><strong>'.esc_html($year).'</strong></td><td>'.$players_html.'</td><td>'.$amounts_html.'</td><td>'.$types_html.'</td></tr>';
+            echo '<tr><td><strong>'.esc_html($year).'</strong></td><td>'.$players_html.'</td><td>'.$amounts_html.'</td></tr>';
         }
         echo '</tbody></table>';
     }
@@ -436,15 +435,15 @@ function display_league_rosters_shortcode() {
 
     // Dead Cap Breakdown
     if ( ! empty($dead_cap_data['grouped']) ) {
+        $grouped_dead_cap = $dead_cap_data['grouped'];
         krsort($grouped_dead_cap);
         echo '<h3>Dead Cap Breakdown</h3>';
-        echo '<table class="fantasy-table-base deadcap-breakdown"><thead><tr><th>Year</th><th>Player</th><th>Amount</th><th>Type</th></tr></thead><tbody>';
+        echo '<table class="fantasy-table-base deadcap-breakdown"><thead><tr><th>Year</th><th>Player</th><th>Amount</th></tr></thead><tbody>';
         foreach ( $grouped_dead_cap as $year => $penalties ) {
             usort($penalties, function($a, $b) { return $b['amount'] <=> $a['amount']; });
             $players_html = implode('<br>', array_map('esc_html', array_column($penalties, 'player')));
             $amounts_html = implode('<br>', array_map(function($p) { return '$' . number_format($p['amount'], 0); }, $penalties));
-            $types_html = implode('<br>', array_map('esc_html', array_column($penalties, 'type')));
-            echo '<tr><td><strong>'.esc_html($year).'</strong></td><td>'.$players_html.'</td><td>'.$amounts_html.'</td><td>'.$types_html.'</td></tr>';
+            echo '<tr><td><strong>'.esc_html($year).'</strong></td><td>'.$players_html.'</td><td>'.$amounts_html.'</td></tr>';
         }
         echo '</tbody></table>';
     }
@@ -525,24 +524,20 @@ function display_league_salary_summary_shortcode() {
             }
         }
     }
-    $dead_cap_totals = [];
-    $args_dc = array( 'post_type' => 'playerdata', 'posts_per_page' => -1, 'fields' => 'ids', 'no_found_rows' => true, 'meta_query' => [ 'relation' => 'AND', [ 'key' => 'league_id', 'value' => $selected_league_id ], [ 'key' => 'dead_cap_penalties', 'compare' => 'EXISTS' ] ] );
-    $q_dc = new WP_Query($args_dc);
-    if ( $q_dc->have_posts() ) {
-        foreach ( $q_dc->posts as $pid ) {
-            $rows = get_field('dead_cap_penalties', $pid);
-            if ( empty($rows) || !is_array($rows) ) { continue; }
-            foreach ( $rows as $row ) {
-                $year = isset($row['penalty_year']) ? (int) $row['penalty_year'] : 0;
-                $amount  = isset($row['penalty_amount']) ? (float) $row['penalty_amount'] : 0.0;
-                $dc_team = $row['dead_cap_team_id'] ?? '';
-                if ( ! $dc_team || ! in_array($year, $years_to_process, true) ) { continue; }
-                if ( ! isset($dead_cap_totals[$dc_team]) ) { $dead_cap_totals[$dc_team] = array_fill_keys($years_to_process, 0.0); }
-                $dead_cap_totals[$dc_team][$year] += $amount;
+    $all_team_ids = array_unique(array_merge(array_keys($active_totals), array_keys($dead_cap_totals)));
+    
+    // --- ADDED: Fetch dead cap for EVERY team in the league ---
+    // We iterate through all found team IDs to ensure none are missed
+    foreach ( $all_team_ids as $tid ) {
+        $dc_data = fod_calculate_dead_cap( $selected_league_id, $tid, $years_to_process );
+        if ( ! empty($dc_data['totals']) ) {
+            if ( ! isset($dead_cap_totals[$tid]) ) { $dead_cap_totals[$tid] = array_fill_keys($years_to_process, 0.0); }
+            foreach ( $years_to_process as $year ) {
+                $dead_cap_totals[$tid][$year] = $dc_data['totals'][$year];
             }
         }
     }
-    $all_team_ids = array_unique(array_merge(array_keys($active_totals), array_keys($dead_cap_totals)));
+
     sort($all_team_ids, SORT_NATURAL);
     ob_start();
     if ( count($all_available_leagues) > 1 ) {

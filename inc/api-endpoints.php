@@ -53,8 +53,96 @@ function fod_register_rest_routes() {
         'callback' => 'fod_get_remote_activity',
         'permission_callback' => '__return_true',
     ));
+
+    // 6. Bulk Dead Cap Update
+    register_rest_route( 'fod/v1', '/bulk-dead-cap', array(
+        'methods'  => 'POST',
+        'callback' => 'fod_bulk_update_dead_cap',
+        'permission_callback' => '__return_true', // In production, add a secret key check
+    ));
 }
 add_action( 'rest_api_init', 'fod_register_rest_routes' );
+
+/**
+ * Bulk update dead cap penalties for players.
+ */
+function fod_bulk_update_dead_cap( $data ) {
+    $penalties = $data->get_param('penalties');
+    if ( ! is_array($penalties) ) {
+        return new WP_Error('invalid_data', 'Penalties must be an array', ['status' => 400]);
+    }
+
+    $results = ['success' => 0, 'failed' => 0, 'messages' => []];
+
+    foreach ( $penalties as $p ) {
+        $player_name = sanitize_text_field($p['player_name']);
+        $league_id   = strtoupper(sanitize_text_field($p['league_id']));
+        $team_id     = strtoupper(sanitize_text_field($p['team_id']));
+        $year        = intval($p['year']);
+        $amount      = floatval($p['amount']);
+        $type        = sanitize_text_field($p['type'] ?: 'Dead Cap');
+
+        // Find the player by exact title and league
+        $player_post_types = ['playerdata', 'nbaplayer'];
+        $pid = 0;
+
+        foreach ($player_post_types as $pt) {
+            $check_query = new WP_Query([
+                'post_type'      => $pt,
+                'title'          => $player_name, // This works if the 'posts_where' filter or exact match is handled, but let's use a safer way
+                'posts_per_page' => 1,
+                'fields'         => 'ids',
+                'meta_query'     => [
+                    ['key' => 'league_id', 'value' => $league_id]
+                ]
+            ]);
+
+            // If the standard title param fails, try querying by title specifically via SQL
+            if ( ! $check_query->have_posts() ) {
+                global $wpdb;
+                $sql = $wpdb->prepare(
+                    "SELECT ID FROM $wpdb->posts p 
+                     INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id 
+                     WHERE p.post_title = %s 
+                     AND p.post_type = %s 
+                     AND pm.meta_key = 'league_id' 
+                     AND pm.meta_value = %s 
+                     LIMIT 1",
+                    $player_name, $pt, $league_id
+                );
+                $found_id = $wpdb->get_var($sql);
+                if ($found_id) {
+                    $pid = $found_id;
+                    break;
+                }
+            } else {
+                $pid = $check_query->posts[0];
+                break;
+            }
+        }
+
+        if ( $pid ) {
+            // Add the dead cap penalty using ACF add_row with specific field keys
+            if ( function_exists('add_row') ) {
+                $new_row = [
+                    'field_69250abc47d99' => $year,   // penalty_year
+                    'field_69250abc47dd3' => $amount, // penalty_amount
+                    'field_69250abc47e0c' => $team_id // dead_cap_team_id
+                ];
+                add_row('dead_cap_penalties', $new_row, $pid);
+                $results['success']++;
+            } else {
+                $results['failed']++;
+                $results['messages'][] = "ACF add_row not found for $player_name";
+            }
+        } else {
+            $results['failed']++;
+            $results['messages'][] = "Player not found: $player_name in $league_id";
+        }
+    }
+
+    return rest_ensure_response($results);
+}
 
 /**
  * Get the teams managed by the currently logged-in user
