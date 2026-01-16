@@ -195,12 +195,39 @@ function display_manager_roster_shortcode() {
     echo '<table class="fantasy-table-base" style="width: auto; margin-bottom: 30px;">';
     echo '<thead><tr><th>26-Man</th><th>40-Man</th><th>Minors</th><th>Injured List</th></tr></thead>';
     echo '<tbody><tr>';
-    $style_26 = ($count_26 > 26) ? 'style="color: red; font-weight: bold;"' : '';
+    
+    $is_offseason = fod_is_offseason();
+    $style_26 = '';
+    $limit_notice = '';
+
+    if ( ! $is_offseason ) {
+        if ( $count_26 > 26 || $count_26 < 22 ) {
+            $style_26 = 'style="color: red; font-weight: bold;"';
+            $limit_notice = '<div class="notice notice-error" style="border-left: 4px solid #d9534f; background: #f2dede; padding: 15px; margin-bottom: 20px;"><strong>Roster Warning:</strong> During the regular season, your 26-man roster must have between 22 and 26 players. Currently: ' . $count_26 . '</div>';
+        }
+    }
+
+    if ( $limit_notice ) {
+        echo '<script>document.getElementById("roster-notices-container").innerHTML = `' . $limit_notice . '`;</script>';
+    }
+
     echo '<td ' . $style_26 . ' style="text-align: center;">' . esc_html($count_26) . ' / 26</td>';
     echo '<td style="text-align: center;">' . esc_html($count_40) . ' / 40</td>';
     echo '<td style="text-align: center;">' . esc_html($count_minors) . '</td>';
     echo '<td style="text-align: center;">' . esc_html($count_il) . '</td>';
     echo '</tr></tbody></table>';
+
+    // Team Financials
+    $isbp_bal = fod_get_team_isbp_balance($selected_league_id, $selected_team_id);
+    $milb_bal = fod_get_team_milb_balance($selected_league_id, $selected_team_id);
+    
+    echo '<h4>Team Financial Allowances</h4>';
+    echo '<table class="fantasy-table-base" style="width: auto; margin-bottom: 30px;">';
+    echo '<thead><tr><th>Allowance Type</th><th>Balance</th></tr></thead>';
+    echo '<tbody>';
+    echo '<tr><td><strong>ISBP Balance</strong></td><td>$' . number_format($isbp_bal) . '</td></tr>';
+    echo '<tr><td><strong>MILB Allowance</strong></td><td>$' . number_format($milb_bal) . '</td></tr>';
+    echo '</tbody></table>';
 
     // Salary Table
     echo fod_render_salary_summary_table( $salary_totals, $dead_cap_totals, $years_to_process );
@@ -290,181 +317,226 @@ function display_manager_roster_shortcode() {
 add_shortcode( 'my_team_roster', 'display_manager_roster_shortcode' );
 
 /* ------------------------------------------------------------------------
-   [league_rosters] — Read-only roster viewer for all teams
+   [league_rosters] — Read-only roster viewer for all teams (REBUILT v3)
 ------------------------------------------------------------------------ */
 function display_league_rosters_shortcode() {
+    // 1. Basic Checks
     if ( ! is_user_logged_in() ) { return '<p>Please log in to view league rosters.</p>'; }
-    if ( ! function_exists('get_field') || ! function_exists('fod_render_player_roster_row') ) { return '<p>Error: A required plugin or helper file is not active.</p>'; }
+    if ( ! function_exists('get_field') ) { return '<p>Error: ACF not active.</p>'; }
 
     global $wpdb;
-    $all_leagues = $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT meta_value FROM {$wpdb->postmeta} pm JOIN {$wpdb->posts} p ON p.ID = pm.post_id WHERE pm.meta_key = %s AND p.post_type = %s ORDER BY meta_value ASC", 'league_id', 'playerdata' ) );
-    if ( empty($all_leagues) ) { return '<p>No leagues found.</p>'; }
+    $years_to_process = range( 2026, 2040 ); // Config
 
+    // 2. Get All Unique Leagues (Fast)
+    // We verify against the DB so we don't show empty links
+    $all_leagues = $wpdb->get_col( 
+        "SELECT DISTINCT meta_value FROM {$wpdb->postmeta} 
+         WHERE meta_key = 'league_id' AND meta_value != '' 
+         ORDER BY meta_value ASC" 
+    );
+
+    if ( empty($all_leagues) ) { return '<p>No leagues found in the database.</p>'; }
+
+    // 3. Determine Selected League
     $selected_league_id = $all_leagues[0];
     if ( isset($_GET['show_league']) ) {
-        $requested_league = sanitize_text_field( wp_unslash( $_GET['show_league'] ) );
-        if ( in_array($requested_league, $all_leagues, true) ) { $selected_league_id = $requested_league; }
+        $req = sanitize_text_field( wp_unslash( $_GET['show_league'] ) );
+        if ( in_array($req, $all_leagues) ) { $selected_league_id = $req; }
     }
 
-    $all_teams_in_league = $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT pm_team.meta_value FROM {$wpdb->postmeta} pm_team INNER JOIN {$wpdb->postmeta} pm_league ON pm_team.post_id = pm_league.post_id WHERE pm_team.meta_key = %s AND pm_league.meta_key = %s AND pm_league.meta_value = %s AND pm_team.meta_value != '' ORDER BY pm_team.meta_value ASC", 'fantasy_team_id', 'league_id', $selected_league_id ) );
-    if ( empty($all_teams_in_league) ) { return '<p>No teams found in this league.</p>'; }
+    // 4. Get Teams for Selected League (Optimized JOIN Query)
+    // This finds every team that has at least one published player in the specific league.
+    // It ignores users/managers completely to prevent errors.
+    $sql_teams = $wpdb->prepare(
+        "SELECT DISTINCT pm_team.meta_value 
+         FROM {$wpdb->postmeta} pm_team
+         INNER JOIN {$wpdb->postmeta} pm_league ON pm_team.post_id = pm_league.post_id
+         INNER JOIN {$wpdb->posts} p ON pm_team.post_id = p.ID
+         WHERE pm_league.meta_key = 'league_id' 
+           AND pm_league.meta_value = %s
+           AND pm_team.meta_key = 'fantasy_team_id' 
+           AND pm_team.meta_value != ''
+           AND p.post_status = 'publish'
+         ORDER BY pm_team.meta_value ASC",
+        $selected_league_id
+    );
+    
+    $all_teams = $wpdb->get_col($sql_teams);
 
-    $selected_team_id = $all_teams_in_league[0];
+    if ( empty($all_teams) ) { 
+        return '<div class="notice notice-warning"><p>No teams found with players in the <strong>' . esc_html($selected_league_id) . '</strong> league.</p></div>'; 
+    }
+
+    // 5. Determine Selected Team
+    $selected_team_id = $all_teams[0];
     if ( isset($_GET['show_team']) ) {
-        $requested_team = sanitize_text_field( wp_unslash( $_GET['show_team'] ) );
-        if ( in_array($requested_team, $all_teams_in_league, true) ) { $selected_team_id = $requested_team; }
+        $req_team = sanitize_text_field( wp_unslash( $_GET['show_team'] ) );
+        if ( in_array($req_team, $all_teams) ) { $selected_team_id = $req_team; }
     }
 
+    // 6. Begin Output
     ob_start();
     ?>
     <style>
-        /* Force spacing reset and use negative margin to pull logo up */
+        /* CSS Fixes for spacing */
         header.entry-header, .entry-title, .wp-block-post-title, hr { display: none !important; }
         .wp-site-blocks { gap: 0 !important; padding-top: 0 !important; }
         main, article, .entry-content { margin-top: 0 !important; padding-top: 0 !important; }
-        .team-header { 
-            margin-top: -80px !important; /* Pulls the logo up into the dead space */
-            margin-bottom: 20px; 
-            padding-top: 0 !important; 
-        }
-        header.wp-block-template-part { margin-bottom: 0 !important; }
+        .team-header { margin-top: -80px !important; margin-bottom: 20px; padding-top: 0 !important; }
     </style>
-    <?php
 
-    // --- Fetch Team Logo for League View ---
+    <!-- League Selector -->
+    <div class="league-selector-ui"><strong>View League:</strong> 
+        <?php 
+        $base_url = get_permalink();
+        $links = [];
+        foreach ($all_leagues as $lid) {
+            $url = add_query_arg(['show_league' => rawurlencode($lid), 'show_team' => false], $base_url);
+            $cls = ($lid === $selected_league_id) ? 'class="is-selected"' : '';
+            $links[] = "<a href='" . esc_url($url) . "' $cls>" . esc_html($lid) . "</a>";
+        }
+        echo implode(' | ', $links);
+        ?>
+    </div>
+
+    <!-- Team Selector -->
+    <div class="team-selector-ui" style="margin-top: 10px;"><strong>View Team:</strong> 
+        <?php 
+        $t_links = [];
+        foreach ($all_teams as $tid) {
+            $url = add_query_arg(['show_league' => rawurlencode($selected_league_id), 'show_team' => rawurlencode($tid)], $base_url);
+            $cls = ($tid === $selected_team_id) ? 'class="is-selected"' : '';
+            $t_links[] = "<a href='" . esc_url($url) . "' $cls>" . esc_html($tid) . "</a>";
+        }
+        echo implode(' | ', $t_links);
+        ?>
+    </div>
+
+    <hr style="display: block !important; margin: 20px 0;">
+
+    <?php
+    // 7. Render Team Data
+    // Fetch Team Logo (Safe Method)
     $logo_url = '';
     $owner_query = new WP_User_Query([
+        'number' => 1,
         'meta_query' => [
             'relation' => 'AND',
-            [
-                'key'     => 'managed_teams_$_league_id',
-                'value'   => $selected_league_id,
-                'compare' => '='
-            ],
-            [
-                'key'     => 'managed_teams_$_fantasy_team_id',
-                'value'   => $selected_team_id,
-                'compare' => '='
-            ]
-        ],
-        'number' => 1
+            ['key' => 'managed_teams', 'value' => '"league_id";s:' . strlen($selected_league_id) . ':"' . $selected_league_id . '"', 'compare' => 'LIKE'],
+            ['key' => 'managed_teams', 'value' => '"fantasy_team_id";s:' . strlen($selected_team_id) . ':"' . $selected_team_id . '"', 'compare' => 'LIKE']
+        ]
     ]);
-    $owners = $owner_query->get_results();
-    if ( ! empty($owners) ) {
-        $owner_id = $owners[0]->ID;
-        $owner_teams = get_field('managed_teams', 'user_' . $owner_id);
-        if ( is_array($owner_teams) ) {
-            foreach ($owner_teams as $ot) {
-                if ( ($ot['league_id'] ?? '') === $selected_league_id && ($ot['fantasy_team_id'] ?? '') === $selected_team_id ) {
-                    $logo_url = $ot['team_logo'] ?? '';
-                    break;
+    if ( !empty($owner_query->get_results()) ) {
+        $owner_id = $owner_query->get_results()[0]->ID;
+        $m_teams = get_field('managed_teams', 'user_' . $owner_id);
+        if ($m_teams) {
+            foreach ($m_teams as $mt) {
+                if (($mt['league_id']??'') == $selected_league_id && ($mt['fantasy_team_id']??'') == $selected_team_id) {
+                    $logo_url = $mt['team_logo']['url'] ?? $mt['team_logo'] ?? '';
                 }
             }
         }
     }
 
     if ($logo_url) {
-        if ( is_array($logo_url) ) { $logo_url = $logo_url['url']; }
-        echo '<div class="team-header"><img src="' . esc_url($logo_url) . '" alt="' . esc_attr($selected_team_id) . ' Logo" class="team-logo-img"></div>';
+        echo '<div class="team-header"><img src="' . esc_url($logo_url) . '" alt="Logo" class="team-logo-img"></div>';
+    } else {
+        echo '<h2 style="margin-top:0;">' . esc_html($selected_team_id) . '</h2>';
     }
 
-    $base_url = get_permalink();
-
-    // League and Team Selectors
-    echo '<div class="league-selector-ui"><strong>View League:</strong> ';
-    $links_l = [];
-    foreach ($all_leagues as $league) {
-        $url = add_query_arg(['show_league' => rawurlencode($league), 'show_team' => false], $base_url);
-        $links_l[] = '<a href="'.esc_url($url).'"'.($league === $selected_league_id ? ' class="is-selected"' : '').'>'.esc_html($league).'</a>';
-    }
-    echo implode(' | ', $links_l) . '</div>';
-    echo '<div class="team-selector-ui" style="margin-top: 10px;"><strong>View Team:</strong> ';
-    $links_t = [];
-    foreach ($all_teams_in_league as $team) {
-        $url = add_query_arg(['show_league' => rawurlencode($selected_league_id), 'show_team' => rawurlencode($team)], $base_url);
-        $links_t[] = '<a href="'.esc_url($url).'"'.($team === $selected_team_id ? ' class="is-selected"' : '').'>'.esc_html($team).'</a>';
-    }
-    echo implode(' | ', $links_t) . '</div>';
-
-    $years_to_process = range( 2026, 2040 );
-    $salary_totals    = array_fill_keys($years_to_process, 0.0);
-
-    // --- Build Rows using Helper ---
-    $build_rows_readonly = function( $q ) use (&$salary_totals, $years_to_process, $selected_league_id, $selected_team_id) {
-        $rows = [];
-        $config = [
-            'is_readonly'        => true,
-            'years_to_process'   => $years_to_process,
-            'selected_league_id' => $selected_league_id,
-            'selected_team_id'   => $selected_team_id,
+    // 8. Financials & Roster Logic
+    $salary_totals = array_fill_keys($years_to_process, 0.0);
+    
+    // Helper to build rows
+    $render_rows = function($meta_query, $is_active_roster) use ($selected_league_id, $selected_team_id, $years_to_process, &$salary_totals) {
+        $args = [
+            'post_type' => 'playerdata', 'posts_per_page' => 300, 'fields' => 'ids',
+            'meta_query' => $meta_query,
+            'orderby' => 'title', 'order' => 'ASC' 
         ];
-        $sorted_ids = fod_sort_players_by_position( $q->posts );
-        foreach ( $sorted_ids as $player_id ) {
-            $rows[] = fod_render_player_roster_row( $player_id, $config, $salary_totals );
+        $q = new WP_Query($args);
+        $rows = [];
+        
+        if (function_exists('fod_sort_players_by_position')) {
+            $ids = fod_sort_players_by_position($q->posts);
+        } else {
+            $ids = $q->posts;
         }
-        return $rows;
+
+        $config = ['is_readonly' => true, 'years_to_process' => $years_to_process, 'selected_league_id' => $selected_league_id, 'selected_team_id' => $selected_team_id];
+
+        foreach ($ids as $pid) {
+            $rows[] = fod_render_player_roster_row($pid, $config, $salary_totals);
+        }
+        return ['html' => implode('', $rows), 'count' => count($rows)];
     };
 
-    // --- Queries ---
-    $common_meta_query = [ 'relation' => 'AND', [ 'key' => 'league_id', 'value' => $selected_league_id ], [ 'key' => 'fantasy_team_id', 'value' => $selected_team_id ], [ 'relation' => 'OR', [ 'key'=>'fa_status', 'value'=>'rostered' ], [ 'key'=>'fa_status', 'compare'=>'NOT EXISTS' ] ], 'position_clause' => [ 'key'=>'position', 'compare'=>'EXISTS' ] ];
-    $args_40 = [ 'post_type' => 'playerdata', 'posts_per_page' => 300, 'fields' => 'ids', 'meta_query' => array_merge($common_meta_query, [ [ 'key' => 'status_40_man', 'value' => 'X' ] ]), 'orderby' => [ 'position_clause' => 'ASC', 'title' => 'ASC' ] ];
-    $q_40 = new WP_Query($args_40);
-    $forty_rows = $build_rows_readonly($q_40);
+    // Construct Queries
+    $base_mq = [
+        'relation' => 'AND',
+        ['key' => 'league_id', 'value' => $selected_league_id],
+        ['key' => 'fantasy_team_id', 'value' => $selected_team_id],
+        ['relation' => 'OR', ['key'=>'fa_status','value'=>'rostered'], ['key'=>'fa_status','compare'=>'NOT EXISTS']]
+    ];
 
-    $args_n40 = [ 'post_type' => 'playerdata', 'posts_per_page' => 300, 'fields' => 'ids', 'meta_query' => array_merge($common_meta_query, [ [ 'relation' => 'OR', [ 'key' => 'status_40_man', 'value' => 'X', 'compare' => '!=' ], [ 'key' => 'status_40_man', 'compare' => 'NOT EXISTS' ] ] ]), 'orderby' => [ 'position_clause' => 'ASC', 'title' => 'ASC' ] ];
-    $q_n40 = new WP_Query($args_n40);
-    $non40_rows = $build_rows_readonly($q_n40);
+    // 40-Man
+    $mq_40 = array_merge($base_mq, [['key'=>'status_40_man', 'value'=>'X']]);
+    // Minors
+    $mq_minors = array_merge($base_mq, [['relation'=>'OR', ['key'=>'status_40_man','compare'=>'NOT EXISTS'], ['key'=>'status_40_man','value'=>'X','compare'=>'!=']]], [['relation'=>'OR', ['key'=>'status_il','compare'=>'NOT EXISTS'], ['key'=>'status_il','value'=>'']]]);
+    // IL
+    $mq_il = array_merge($base_mq, [['key'=>'status_il', 'compare'=>'EXISTS'], ['key'=>'status_il', 'value'=>'', 'compare'=>'!=']]);
 
-    $q_26 = new WP_Query([ 'post_type' => 'playerdata', 'fields' => 'ids', 'posts_per_page' => -1, 'no_found_rows' => true, 'meta_query' => [ 'relation' => 'AND', ['key' => 'league_id', 'value' => $selected_league_id], ['key' => 'fantasy_team_id', 'value' => $selected_team_id], ['key' => 'status_26_man', 'value' => '1', 'compare' => '='] ] ]);
+    $data_40 = $render_rows($mq_40, true);
+    $data_minors = $render_rows($mq_minors, false);
+    $data_il = $render_rows($mq_il, false);
+
+    // Dead Cap
+    $dc_data = fod_calculate_dead_cap($selected_league_id, $selected_team_id, $years_to_process);
+    
+    // 9. Render Tables
+    // Header
+    $th = '<thead><tr><th>Name</th><th>Pos</th><th>MLB</th><th>IL</th><th>40</th><th>26</th><th>DFA</th><th>Opt</th><th>Yrs</th><th>Rule5</th>';
+    foreach($years_to_process as $y) $th .= "<th>$y</th>";
+    $th .= '</tr></thead>';
+
+    // -- Financials & Counts --
+    $isbp = fod_get_team_isbp_balance($selected_league_id, $selected_team_id);
+    $milb = fod_get_team_milb_balance($selected_league_id, $selected_team_id);
+    
+    // Count Logic (already calculated by render_rows)
+    // We need to calculate 26-man separately as it's a subset of 40-man
+    $q_26 = new WP_Query([
+        'post_type' => 'playerdata', 'fields' => 'ids', 'posts_per_page' => -1, 'no_found_rows' => true,
+        'meta_query' => [
+            'relation' => 'AND',
+            ['key' => 'league_id', 'value' => $selected_league_id],
+            ['key' => 'fantasy_team_id', 'value' => $selected_team_id],
+            ['key' => 'status_26_man', 'value' => '1']
+        ]
+    ]);
     $count_26 = $q_26->post_count;
-    $count_40 = $q_40->post_count;
-    $count_minors = $q_n40->post_count;
 
-    // Roster Counts
-    echo '<h4>Roster Counts</h4>';
-    echo '<table class="fantasy-table-base" style="width: auto; margin-bottom: 30px;"><thead><tr><th>26-Man</th><th>40-Man</th><th>Minors</th></tr></thead><tbody>';
-    $style_26 = ($count_26 > 26) ? 'style="color: red; font-weight: bold;"' : '';
-    echo '<td ' . $style_26 . ' style="text-align: center;">' . esc_html($count_26) . ' / 26</td>';
-    echo '<td style="text-align: center;">' . esc_html($count_40) . ' / 40</td>';
-    echo '<td style="text-align: center;">' . esc_html($count_minors) . '</td>';
-    echo '</tr></tbody></table>';
+    echo "<div style='display:flex; flex-wrap:wrap; gap:15px; margin-bottom:20px; align-items:center;'>
+            <div style='background:#f9f9f9; padding:10px 15px; border:1px solid #ddd; border-radius:4px;'><strong>ISBP:</strong> $".number_format($isbp)."</div>
+            <div style='background:#f9f9f9; padding:10px 15px; border:1px solid #ddd; border-radius:4px;'><strong>MiLB:</strong> $".number_format($milb)."</div>
+            <div style='background:#fff; padding:10px 15px; border:1px solid #ccc; border-radius:4px;'><strong>26-Man:</strong> " . $count_26 . "</div>
+            <div style='background:#fff; padding:10px 15px; border:1px solid #ccc; border-radius:4px;'><strong>40-Man:</strong> " . $data_40['count'] . "</div>
+            <div style='background:#fff; padding:10px 15px; border:1px solid #ccc; border-radius:4px;'><strong>Minors:</strong> " . $data_minors['count'] . "</div>
+            <div style='background:#fff; padding:10px 15px; border:1px solid #ccc; border-radius:4px;'><strong>IL:</strong> " . $data_il['count'] . "</div>
+          </div>";
 
-    // Dead Cap & Salary Tables
-    $dead_cap_data = fod_calculate_dead_cap( $selected_league_id, $selected_team_id, $years_to_process );
-    echo fod_render_salary_summary_table( $salary_totals, $dead_cap_data['totals'], $years_to_process );
+    echo fod_render_salary_summary_table($salary_totals, $dc_data['totals'], $years_to_process);
 
-    // Dead Cap Breakdown
-    if ( ! empty($dead_cap_data['grouped']) ) {
-        $grouped_dead_cap = $dead_cap_data['grouped'];
-        krsort($grouped_dead_cap);
-        echo '<h3>Dead Cap Breakdown</h3>';
-        echo '<table class="fantasy-table-base deadcap-breakdown"><thead><tr><th>Year</th><th>Player</th><th>Amount</th></tr></thead><tbody>';
-        foreach ( $grouped_dead_cap as $year => $penalties ) {
-            usort($penalties, function($a, $b) { return $b['amount'] <=> $a['amount']; });
-            $players_html = implode('<br>', array_map('esc_html', array_column($penalties, 'player')));
-            $amounts_html = implode('<br>', array_map(function($p) { return '$' . number_format($p['amount'], 0); }, $penalties));
-            echo '<tr><td><strong>'.esc_html($year).'</strong></td><td>'.$players_html.'</td><td>'.$amounts_html.'</td></tr>';
-        }
-        echo '</tbody></table>';
+    echo '<h3>40-Man Roster (' . $data_40['count'] . ')</h3>';
+    echo '<table class="fantasy-table-base">' . $th . '<tbody>' . ($data_40['html'] ?: '<tr><td colspan="20">No players.</td></tr>') . '</tbody></table>';
+
+    if ($data_il['count'] > 0) {
+        echo '<h3>Injured List (' . $data_il['count'] . ')</h3>';
+        echo '<table class="fantasy-table-base">' . $th . '<tbody>' . $data_il['html'] . '</tbody></table>';
     }
 
-    // Table Headers
-    $head = '<thead><tr><th>Name</th><th>Position</th><th>MLB Team</th><th>IL</th><th>40-Man</th><th>26-Man</th><th>DFA Only</th><th>Options (Season)</th><th>Option Years Used</th><th>Rule 5 Year</th>';
-    foreach ($years_to_process as $y) $head .= '<th>'.esc_html($y).'</th>';
-    $head .= '</tr></thead>';
-    $col_count = 10 + count($years_to_process);
-
-    // 40-Man Roster
-    echo '<h3>40-Man Roster</h3>';
-    echo '<table id="roster-40-table" class="fantasy-table-base">' . $head . '<tbody id="roster-40-tbody">';
-    echo $forty_rows ? implode('', $forty_rows) : '<tr><td colspan="' . $col_count . '">No players found on the 40-man roster.</td></tr>';
-    echo '</tbody></table>';
-
-    // Minor League / Off-Roster
-    echo '<h3>Minor League / Off-Roster</h3>';
-    echo '<table id="roster-minors-table" class="fantasy-table-base">' . $head . '<tbody id="roster-minors-tbody">';
-    echo $non40_rows ? implode('', $non40_rows) : '<tr><td colspan="' . $col_count . '">No players found off the 40-man roster.</td></tr>';
-    echo '</tbody></table>';
+    echo '<h3>Minors / Off-Roster (' . $data_minors['count'] . ')</h3>';
+    echo '<table class="fantasy-table-base">' . $th . '<tbody>' . ($data_minors['html'] ?: '<tr><td colspan="20">No players.</td></tr>') . '</tbody></table>';
 
     return ob_get_clean();
 }
@@ -479,6 +551,9 @@ function display_league_salary_summary_shortcode() {
     $selected_league_id    = null;
     $manager_leagues       = [];
     $all_available_leagues = [];
+    $dead_cap_totals       = []; // Initialize to prevent fatal error
+    $active_totals         = []; // Initialize active totals as well
+
     if ( is_user_logged_in() && function_exists('get_field') ) {
         $user_id  = get_current_user_id();
         $managed_teams = get_field('managed_teams', 'user_' . $user_id);
@@ -524,6 +599,11 @@ function display_league_salary_summary_shortcode() {
             }
         }
     }
+    
+    // Ensure dead_cap_totals is an array
+    if ( ! is_array($dead_cap_totals) ) { $dead_cap_totals = []; }
+    if ( ! is_array($active_totals) ) { $active_totals = []; }
+
     $all_team_ids = array_unique(array_merge(array_keys($active_totals), array_keys($dead_cap_totals)));
     
     // --- ADDED: Fetch dead cap for EVERY team in the league ---
@@ -557,16 +637,36 @@ function display_league_salary_summary_shortcode() {
         return ob_get_clean();
     }
     echo '<table class="fantasy-table-base">';
-    echo '<thead><tr><th>Team</th>';
+    echo '<thead><tr><th>Team</th><th>ISBP</th><th>MILB</th>';
     foreach ( $years_to_process as $year ) { echo '<th>' . esc_html($year) . '</th>'; }
+    echo '<th>Avg Payroll</th>'; // Add header
     echo '</tr></thead><tbody>';
     foreach ( $all_team_ids as $team_id ) {
+        $isbp_bal = fod_get_team_isbp_balance($selected_league_id, $team_id);
+        $milb_bal = fod_get_team_milb_balance($selected_league_id, $team_id);
+        
         echo '<tr><td><strong>' . esc_html($team_id) . '</strong></td>';
+        echo '<td>$' . number_format($isbp_bal) . '</td>';
+        echo '<td>$' . number_format($milb_bal) . '</td>';
+        
+        $row_total_for_avg = 0.0;
+        $years_counted = 0;
         foreach ( $years_to_process as $year ) {
-            $active   = $active_totals[$team_id][$year]   ?? 0.0;
-            $dead_cap = $dead_cap_totals[$team_id][$year] ?? 0.0;
-            echo '<td>$' . esc_html( number_format($active + $dead_cap, 0) ) . '</td>';
+            // Safety check for PHP 8.x: check parent key before accessing year offset
+            $active   = isset($active_totals[$team_id][$year]) ? $active_totals[$team_id][$year] : 0.0;
+            $dead_cap = isset($dead_cap_totals[$team_id][$year]) ? $dead_cap_totals[$team_id][$year] : 0.0;
+            
+            $total    = $active + $dead_cap;
+            echo '<td>$' . esc_html( number_format($total, 0) ) . '</td>';
+            
+            // Calculate avg for the first 5 years (2026-2030)
+            if ($year <= 2030) {
+                $row_total_for_avg += $total;
+                $years_counted++;
+            }
         }
+        $avg = ($years_counted > 0) ? $row_total_for_avg / $years_counted : 0;
+        echo '<td style="background: #f9f9f9; font-weight: bold;">$' . esc_html( number_format($avg, 0) ) . '</td>';
         echo '</tr>';
     }
     echo '</tbody></table>';
@@ -595,10 +695,12 @@ function display_trade_proposal_form_shortcode() {
             case 'acf_missing': $error_message = 'A configuration error occurred. ACF functions missing.'; break;
             case 'ownership_mismatch': $error_message = 'Trade failed: A player involved in the trade is no longer on the expected team.'; break;
             case 'no_players': $error_message = 'A trade must involve at least one player.'; break;
+            case 'deadline_passed': $error_message = 'The trade deadline for this league has passed.'; break;
         }
         echo '<div class="trade-form-notice error">Error: ' . esc_html($error_message) . '</div>';
     }
     ?>
+    <div id="trade-deadline-notice" class="trade-form-notice error" style="display:none; margin-bottom: 20px;"></div>
     <form id="trade-proposal-form" class="trade-proposal-form-class" method="post" action="<?php echo esc_url( admin_url('admin-post.php') ); ?>">
         <input type="hidden" name="action" value="process_trade_proposal">
         <?php wp_nonce_field( 'process_trade_proposal_nonce', 'trade_proposal_nonce_field' ); ?>
@@ -687,6 +789,33 @@ function display_trade_proposal_form_shortcode() {
         $('#trade_league').on('change', function() {
             var leagueId = $(this).val();
             console.log('League changed to: ' + leagueId);
+
+            if (!leagueId) {
+                $('#target_manager').prop('disabled', true).html('<option value="">-- Select League First --</option>');
+                $('#players_offered, #players_requested').prop('disabled', true).html('<option value="" disabled>-- Select League First --</option>');
+                return;
+            }
+
+            // Check if trading is allowed for this league
+            $.ajax({
+                url: '<?php echo admin_url('admin-ajax.php'); ?>',
+                type: 'POST',
+                data: {
+                    action: 'check_league_trade_status',
+                    league_id: leagueId
+                },
+                success: function(response) {
+                    if (response.success && response.data.can_trade) {
+                        $('#trade-deadline-notice').hide();
+                        $('#target_manager').prop('disabled', false);
+                        // ... existing logic to load managers ...
+                    } else {
+                        $('#trade-deadline-notice').text('Trading is currently closed for the ' + leagueId + ' league (Trade Deadline has passed).').show();
+                        $('#target_manager, #players_offered, #players_requested').prop('disabled', true);
+                        $('#propose-trade-submit').prop('disabled', true);
+                    }
+                }
+            });
         });
 
         $('#target_manager').on('change', function() {

@@ -306,3 +306,54 @@ add_action('process_waivers_event', 'process_cleared_waivers_handler');
 if ( ! wp_next_scheduled( 'process_waivers_event' ) ) {
     wp_schedule_event( time(), 'every_five_minutes', 'process_waivers_event' );
 }
+
+/**
+ * Daily check to clear IL during offseason.
+ */
+function fod_clear_injured_list_for_offseason() {
+    if ( ! function_exists('fod_is_offseason') || ! fod_is_offseason() ) {
+        return;
+    }
+
+    $args = [
+        'post_type'      => ['playerdata', 'nbaplayer'],
+        'posts_per_page' => -1,
+        'fields'         => 'ids',
+        'meta_query'     => [
+            [
+                'key'     => 'status_il',
+                'value'   => '',
+                'compare' => '!='
+            ]
+        ]
+    ];
+
+    $query = new WP_Query($args);
+    if ( $query->have_posts() ) {
+        foreach ( $query->posts as $pid ) {
+            update_post_meta($pid, 'status_il', '');
+            update_post_meta($pid, 'il_start_date', '');
+            
+            // Log move
+            $player_name = get_the_title($pid);
+            $team_id = get_post_meta($pid, 'fantasy_team_id', true);
+            $league_id = get_post_meta($pid, 'league_id', true);
+            
+            if ( function_exists('log_league_transaction') ) {
+                log_league_transaction([
+                    'transaction_type' => 'Roster Move',
+                    'player_ids'       => [$pid],
+                    'primary_team'     => $team_id,
+                    'league_id'        => $league_id,
+                    'summary'          => "$player_name automatically activated from IL (Offseason Start).",
+                ]);
+            }
+        }
+    }
+    wp_reset_postdata();
+}
+add_action( 'fod_daily_offseason_event', 'fod_clear_injured_list_for_offseason' );
+
+if ( ! wp_next_scheduled( 'fod_daily_offseason_event' ) ) {
+    wp_schedule_event( time(), 'daily', 'fod_daily_offseason_event' );
+}

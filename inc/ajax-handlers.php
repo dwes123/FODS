@@ -100,9 +100,15 @@ function handle_trade_proposal_submission() {
     if ( ! is_user_logged_in() ) { wp_redirect( add_query_arg('trade_error', 'not_logged_in', $redirect_url) ); exit; }
     if ( ! function_exists('update_field') ) { error_log("ACF function error in process_trade_proposal: update_field not found."); wp_redirect( add_query_arg('trade_error', 'acf_missing', $redirect_url) ); exit; }
     
+    $selected_league      = isset($_POST['trade_league']) ? sanitize_text_field( wp_unslash($_POST['trade_league']) ) : '';
+    
+    if ( ! fod_can_trade($selected_league) ) {
+        wp_redirect( add_query_arg('trade_error', 'deadline_passed', $redirect_url) );
+        exit;
+    }
+
     $proposing_manager_id = get_current_user_id();
     $target_manager_id    = isset($_POST['target_manager']) ? absint($_POST['target_manager']) : 0;
-    $selected_league      = isset($_POST['trade_league']) ? sanitize_text_field( wp_unslash($_POST['trade_league']) ) : '';
     $offered_player_ids   = isset($_POST['players_offered'])   ? array_map('absint', (array)$_POST['players_offered'])   : array();
     $requested_player_ids = isset($_POST['players_requested']) ? array_map('absint', (array)$_POST['players_requested']) : array();
     $isbp_offered         = isset($_POST['isbp_offered']) ? absint($_POST['isbp_offered']) : 0;
@@ -167,22 +173,6 @@ function handle_trade_proposal_submission() {
     }
 }
 add_action( 'admin_post_process_trade_proposal', 'handle_trade_proposal_submission' );
-
-/**
- * Helper to get a team's ISBP balance from the options page.
- */
-function fod_get_team_isbp_balance($league_id, $team_id) {
-    $field_name = 'isbp_' . strtolower($league_id);
-    $rows = get_field($field_name, 'option');
-    if (is_array($rows)) {
-        foreach ($rows as $row) {
-            if (($row['team_id'] ?? '') === $team_id) {
-                return (int)($row['balance'] ?? 0);
-            }
-        }
-    }
-    return 0;
-}
 
 function get_managers_for_trade_ajax_handler() {
     if ( !is_user_logged_in() ) { wp_send_json_error('Not logged in.'); wp_die(); }
@@ -266,6 +256,22 @@ function get_target_players_for_trade_ajax_handler() {
 add_action('wp_ajax_get_managers_for_trade', 'get_managers_for_trade_ajax_handler');
 add_action('wp_ajax_get_my_players_for_trade', 'get_my_players_for_trade_ajax_handler');
 add_action('wp_ajax_get_target_players_for_trade', 'get_target_players_for_trade_ajax_handler');
+
+/**
+ * AJAX handler to check if trading is allowed for a league.
+ */
+function check_league_trade_status_ajax_handler() {
+    if ( ! is_user_logged_in() ) { wp_send_json_error('Not logged in.'); wp_die(); }
+    
+    $league_id = isset($_POST['league_id']) ? sanitize_text_field($_POST['league_id']) : '';
+    if ( empty($league_id) ) { wp_send_json_error('League ID missing.'); wp_die(); }
+
+    wp_send_json_success([
+        'can_trade' => fod_can_trade($league_id)
+    ]);
+    wp_die();
+}
+add_action('wp_ajax_check_league_trade_status', 'check_league_trade_status_ajax_handler');
 
 /* ------------------------------------------------------------------------
    Trade Action Handlers (Accept, Reject, Cancel)

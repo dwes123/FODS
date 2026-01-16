@@ -50,6 +50,9 @@ require_once get_stylesheet_directory() . '/inc/admin-user-columns.php';
 require_once get_stylesheet_directory() . '/inc/arbitration.php';
 require_once get_stylesheet_directory() . '/inc/admin-arbitration-approval.php';
 
+// Load Bug Reporting System
+require_once get_stylesheet_directory() . '/inc/bug-reports.php';
+
 // Load Mobile API Endpoints
 require_once get_stylesheet_directory() . '/inc/api-endpoints.php';
 
@@ -120,3 +123,57 @@ function fod_unregister_player_cpt() {
     unregister_post_type( 'player' );
 }
 add_action( 'init', 'fod_unregister_player_cpt', 100 ); // High priority to run after it's registered
+
+/**
+ * SIMPLE DIAGNOSTICS SHORTCODE
+ * Usage: [fod_status]
+ */
+add_shortcode('fod_status', function() {
+    if (!current_user_can('manage_options')) return 'Admin Only';
+    
+    global $wpdb;
+    $out = '<div style="padding:20px;background:#fff;border:4px solid #333;color:#000;z-index:99999;position:relative;">';
+    $out .= '<h2 style="margin-top:0;">System Status Check</h2>';
+
+    // 1. Check if "playerdata" CPT exists
+    $pt = get_post_type_object('playerdata');
+    $out .= '<p style="font-size:16px;"><strong>1. Player Data Post Type:</strong> ';
+    if ($pt) {
+        $out .= '<span style="color:green;font-weight:bold;">✅ REGISTERED</span> (Label: ' . $pt->label . ')';
+    } else {
+        $out .= '<span style="color:red;font-weight:bold;">❌ MISSING</span> <br><em>(This means the Post Type was deleted or not registered. Check CPT UI settings.)</em>';
+    }
+    $out .= '</p>';
+
+    // 2. Check Database Content
+    $count = wp_count_posts('playerdata');
+    $published = $count->publish ?? 0;
+    $out .= '<p style="font-size:16px;"><strong>2. Published Players in DB:</strong> ' . $published . '</p>';
+
+    // 3. Test Team Discovery (The fix I applied earlier)
+    $test_league = 'AAA';
+    $sql = $wpdb->prepare(
+        "SELECT DISTINCT pm_team.meta_value 
+         FROM {$wpdb->postmeta} pm_team
+         INNER JOIN {$wpdb->postmeta} pm_league ON pm_team.post_id = pm_league.post_id
+         INNER JOIN {$wpdb->posts} p ON pm_team.post_id = p.ID
+         WHERE pm_league.meta_key = 'league_id' 
+           AND pm_league.meta_value = %s
+           AND pm_team.meta_key = 'fantasy_team_id' 
+           AND pm_team.meta_value != ''
+           AND p.post_status = 'publish' LIMIT 5",
+        $test_league
+    );
+    $teams = $wpdb->get_col($sql);
+    
+    $out .= '<p style="font-size:16px;"><strong>3. Team Discovery Test (AAA):</strong> ';
+    if (!empty($teams)) {
+        $out .= '<span style="color:green;font-weight:bold;">✅ SUCCESS</span> (Found: ' . implode(', ', $teams) . ')';
+    } else {
+        $out .= '<span style="color:red;font-weight:bold;">❌ FAILED</span> (No teams found via SQL query)';
+    }
+    $out .= '</p>';
+
+    $out .= '</div>';
+    return $out;
+});

@@ -139,11 +139,14 @@ function fod_render_player_roster_row( $player_id, $config, & $salary_totals ) {
         $tr                  .= '<td class="player-action-cell">';
         $common_data_attrs = 'data-playerid="' . esc_attr( $player_id ) . '" data-playername="' . esc_attr( $name ) . '" data-leagueid="' . esc_attr( $selected_league_id ) . '" data-teamid="' . esc_attr( $selected_team_id ) . '"';
         $on_il               = ! empty( $status_il );
+        $is_offseason        = fod_is_offseason();
 
         if ( $on_il ) {
             $tr .= '<button type="button" class="button activate-from-il-button" ' . $common_data_attrs . '>Activate from IL</button>';
         } else {
-            $tr .= '<button type="button" class="button move-to-il-button" ' . $common_data_attrs . '>Move to IL</button>';
+            if ( ! $is_offseason ) {
+                $tr .= '<button type="button" class="button move-to-il-button" ' . $common_data_attrs . '>Move to IL</button>';
+            }
             if ( $is_on_40_man ) {
                 if ( (int) $total_option_years_used < 3 ) {
                     $tr .= '<button type="button" class="button option-minors-button" ' . $common_data_attrs . '>Option to Minors</button>';
@@ -312,4 +315,96 @@ function fod_render_salary_summary_table( $salary_totals, $dead_cap_totals, $yea
     </table>
     <?php
     return ob_get_clean();
+}
+
+/**
+ * Helper to get a team's ISBP balance from the options page.
+ */
+function fod_get_team_isbp_balance($league_id, $team_id) {
+    $field_name = 'isbp_' . strtolower($league_id);
+    $rows = get_field($field_name, 'option');
+    if (is_array($rows)) {
+        foreach ($rows as $row) {
+            if (($row['team_id'] ?? '') === $team_id) {
+                return (int)($row['balance'] ?? 0);
+            }
+        }
+    }
+    return 0;
+}
+
+/**
+ * Helper to get a team's MILB Allowance balance from the options page.
+ */
+function fod_get_team_milb_balance($league_id, $team_id) {
+    $field_name = 'milb_' . strtolower($league_id);
+    $rows = get_field($field_name, 'option');
+    if (is_array($rows)) {
+        foreach ($rows as $row) {
+            if (($row['team_id'] ?? '') === $team_id) {
+                return (int)($row['balance'] ?? 0);
+            }
+        }
+    }
+    return 0;
+}
+
+/**
+ * Checks if it is currently the offseason.
+ * Offseason: October 15th through March 15th.
+ *
+ * @return bool
+ */
+function fod_is_offseason() {
+    $now = current_time('timestamp');
+    $current_md = (int) date('md', $now); // e.g., 0114 for Jan 14
+    
+    // October 15 (1015) to March 15 (0315)
+    if ($current_md >= 1015 || $current_md <= 315) {
+        return true;
+    }
+    
+    return false;
+}
+
+/**
+ * Retrieves the trade deadline for a specific league and year.
+ *
+ * @param string $league_id
+ * @param int    $year
+ * @return string|false Ymd date string or false if not found.
+ */
+function fod_get_trade_deadline( $league_id, $year ) {
+    $deadlines = get_field( 'trade_deadlines', 'option' );
+    if ( is_array( $deadlines ) ) {
+        foreach ( $deadlines as $row ) {
+            if ( (int) $row['year'] === (int) $year && $row['league_id'] === $league_id ) {
+                return $row['deadline_date']; // Expecting Ymd format
+            }
+        }
+    }
+    return false;
+}
+
+/**
+ * Checks if trading is currently allowed for a league.
+ * 
+ * @param string $league_id
+ * @return bool
+ */
+function fod_can_trade( $league_id ) {
+    if ( fod_is_offseason() ) {
+        return true; // Always allowed in offseason
+    }
+
+    $current_year = (int) date('Y');
+    $deadline = fod_get_trade_deadline( $league_id, $current_year );
+
+    if ( ! $deadline ) {
+        return true; // If no deadline is set, assume allowed
+    }
+
+    $now_ymd = date('Ymd', current_time('timestamp'));
+    
+    return ( $now_ymd <= $deadline );
 }
