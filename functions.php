@@ -53,6 +53,9 @@ require_once get_stylesheet_directory() . '/inc/admin-arbitration-approval.php';
 // Load Bug Reporting System
 require_once get_stylesheet_directory() . '/inc/bug-reports.php';
 
+// Load Contract Extension Calculator
+require_once get_stylesheet_directory() . '/inc/contract-extensions.php';
+
 // Load Mobile API Endpoints
 require_once get_stylesheet_directory() . '/inc/api-endpoints.php';
 

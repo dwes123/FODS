@@ -191,4 +191,109 @@ jQuery(document).ready(function($) {
         
         handleRosterAction(btn, data);
     });
+
+    // --- 7. Contract Restructure Modal ---
+    var resModal = $('#restructure-modal');
+    if (resModal.length) {
+        var resForm = resModal.find('#restructure-form');
+        var resLoading = resModal.find('#restructure-loading');
+        var fromSelect = $('#restructure-from-year');
+        var toSelect = $('#restructure-to-year');
+        var amountInput = $('#restructure-amount');
+        var playerContracts = {}; // Store for calculations
+
+        $(document).on('click', '.restructure-player-button', function(e) {
+            e.preventDefault();
+            var btn = $(this);
+            var pid = btn.data('playerid');
+            
+            resModal.find('h3').text('Restructure: ' + btn.data('playername'));
+            resModal.find('#restructure-player-id').val(pid);
+            resModal.find('#restructure-modal-message').html('');
+            resForm.hide();
+            resLoading.show();
+            resModal.removeClass('fa-modal-hidden');
+
+            $.ajax({
+                url: faModalData.ajax_url,
+                type: 'POST',
+                data: { action: 'get_restructure_data', player_id: pid },
+                success: function(response) {
+                    resLoading.hide();
+                    if (response.success) {
+                        playerContracts = response.data.contracts;
+                        populateRestructureFields(playerContracts);
+                        resForm.show();
+                    } else {
+                        resModal.find('#restructure-modal-message').html('<div class="notice notice-error" style="color:red; margin-bottom:10px;">'+response.data+'</div>');
+                    }
+                }
+            });
+        });
+
+        function populateRestructureFields(contracts) {
+            fromSelect.empty().append('<option value="">-- Select Source Year --</option>');
+            toSelect.empty().append('<option value="">-- Select Target Year --</option>');
+            
+            for (var yr in contracts) {
+                var opt = $('<option>', { value: yr, text: yr + ' ($' + parseInt(contracts[yr]).toLocaleString() + ')' });
+                fromSelect.append(opt.clone());
+                toSelect.append(opt.clone());
+            }
+            amountInput.val('');
+            $('#restructure-preview').hide();
+        }
+
+        // Live Preview & Validation
+        resForm.on('change input', 'select, input', function() {
+            var fromYr = fromSelect.val();
+            var toYr = toSelect.val();
+            var amount = parseFloat(amountInput.val()) || 0;
+
+            if (fromYr) {
+                var max = Math.floor(playerContracts[fromYr] * 0.5);
+                $('#restructure-max-hint').text('Max move: $' + max.toLocaleString() + ' (50%)');
+                amountInput.attr('max', max);
+            }
+
+            if (fromYr && toYr && amount > 0 && fromYr !== toYr) {
+                var fromRem = playerContracts[fromYr] - amount;
+                var toNew = playerContracts[toYr] + amount;
+                
+                $('#preview-from-yr').text(fromYr);
+                $('#preview-from-amt').text('$' + fromRem.toLocaleString());
+                $('#preview-to-yr').text(toYr);
+                $('#preview-to-amt').text('$' + toNew.toLocaleString());
+                $('#restructure-preview').show();
+            } else {
+                $('#restructure-preview').hide();
+            }
+        });
+
+        resForm.on('submit', function(e) {
+            e.preventDefault();
+            if (fromSelect.val() === toSelect.val()) { alert('Source and Target years must be different.'); return; }
+            
+            var maxAllowed = Math.floor(playerContracts[fromSelect.val()] * 0.5);
+            if (parseFloat(amountInput.val()) > maxAllowed) {
+                alert('You cannot move more than 50% of the year\'s salary.');
+                return;
+            }
+
+            if (!confirm('Are you sure you want to execute this restructure? This cannot be undone and counts as your 1 restructure for the year.')) return;
+
+            var data = {
+                action: 'process_restructure',
+                player_id: $('#restructure-player-id').val(),
+                from_year: fromSelect.val(),
+                to_year: toSelect.val(),
+                amount: amountInput.val(),
+                nonce: faModalData.roster_move_nonce
+            };
+
+            handleRosterAction($('#restructure-submit-button'), data);
+        });
+
+        resModal.find('.fa-modal-close, .fa-modal-cancel').on('click', function() { resModal.addClass('fa-modal-hidden'); });
+    }
 });

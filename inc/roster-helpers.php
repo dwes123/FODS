@@ -157,6 +157,17 @@ function fod_render_player_roster_row( $player_id, $config, & $salary_totals ) {
             } else {
                 $tr .= '<button type="button" class="button promote-40-button" ' . $common_data_attrs . '>Move to 40-Man</button>';
             }
+            
+            // Add Restructure Button (Offseason only)
+            if ( $is_offseason && !get_field('has_been_restructured', $player_id) ) {
+                $tr .= '<button type="button" class="button restructure-player-button" ' . $common_data_attrs . ' style="background-color: #673ab7; color: white; border-color: #512da8;">Restructure</button>';
+            }
+
+            // Add Extend Button (Offseason only)
+            if ( $is_offseason ) {
+                $tr .= '<button type="button" class="button extend-player-button" ' . $common_data_attrs . ' data-position="' . esc_attr($position) . '" style="background-color: #0073aa; color: white; border-color: #006799;">Extend</button>';
+            }
+
             $tr .= '<button type="button" class="button dfa-player-button" ' . $common_data_attrs . '>DFA</button>';
         }
         $tr .= '</td>';

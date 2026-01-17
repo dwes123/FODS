@@ -840,3 +840,124 @@ add_action('wp_ajax_activate_from_il', 'activate_player_from_il_ajax_handler');
 // Other AJAX handlers...
 add_action('wp_ajax_fa_search', 'fa_search_ajax_handler');
 add_action('wp_ajax_waive_player', 'waive_player_ajax_handler');
+
+/* ------------------------------------------------------------------------
+   Contract Restructure System
+------------------------------------------------------------------------ */
+
+/**
+ * AJAX: Fetch player contract data for the restructure modal
+ */
+function fod_get_restructure_data_handler() {
+    if ( !is_user_logged_in() ) { wp_send_json_error('Not logged in.'); }
+    
+    $player_id = isset($_POST['player_id']) ? absint($_POST['player_id']) : 0;
+    if ( !$player_id ) { wp_send_json_error('Invalid player ID.'); }
+
+    if ( !is_user_owner_of_player( get_current_user_id(), $player_id ) ) {
+        wp_send_json_error('You do not own this player.');
+    }
+
+    // Check Eligibility
+    if ( ! fod_is_offseason() ) {
+        wp_send_json_error('Contracts can only be restructured during the offseason (Oct 15 - March 15).');
+    }
+
+    if ( get_field('has_been_restructured', $player_id) ) {
+        wp_send_json_error('This contract has already been restructured and cannot be changed again.');
+    }
+
+    $contracts = [];
+    foreach (range(2026, 2040) as $year) {
+        $val = get_post_meta($player_id, 'contract_' . $year, true);
+        if ( is_numeric($val) && $val > 0 ) {
+            $contracts[$year] = (float)$val;
+        }
+    }
+
+    if ( count($contracts) < 2 ) {
+        wp_send_json_error('Player must have at least 2 years of contract remaining to restructure.');
+    }
+
+    wp_send_json_success([
+        'name'      => get_the_title($player_id),
+        'contracts' => $contracts
+    ]);
+}
+add_action('wp_ajax_get_restructure_data', 'fod_get_restructure_data_handler');
+
+/**
+ * AJAX: Process the contract restructure
+ */
+function fod_process_contract_restructure_handler() {
+    check_ajax_referer('roster_move_nonce', 'nonce');
+    if ( !is_user_logged_in() ) { wp_send_json_error('Not logged in.'); }
+
+    $player_id = isset($_POST['player_id']) ? absint($_POST['player_id']) : 0;
+    $from_year = isset($_POST['from_year']) ? absint($_POST['from_year']) : 0;
+    $to_year   = isset($_POST['to_year'])   ? absint($_POST['to_year'])   : 0;
+    $amount    = isset($_POST['amount'])    ? floatval($_POST['amount'])  : 0;
+
+    if ( !$player_id || !$from_year || !$to_year || $amount <= 0 ) {
+        wp_send_json_error('Missing required fields.');
+    }
+
+    if ( !fod_is_offseason() ) { wp_send_json_error('Not in offseason.'); }
+    if ( !is_user_owner_of_player( get_current_user_id(), $player_id ) ) { wp_send_json_error('Permission denied.'); }
+    if ( get_field('has_been_restructured', $player_id) ) { wp_send_json_error('Already restructured.'); }
+
+    $team_id = get_field('fantasy_team_id', $player_id);
+    $league_id = get_field('league_id', $player_id);
+    $current_year = date('Y');
+
+    // Check Team Limit (1 per year)
+    if ( fod_has_team_restructured_this_year($team_id, $current_year) ) {
+        wp_send_json_error("Team $team_id has already used its 1 contract restructure for this year.");
+    }
+
+    // Validate Amount (Max 50%)
+    $source_salary = (float) get_post_meta($player_id, 'contract_' . $from_year, true);
+    if ( $amount > ($source_salary * 0.501) ) { // Allow small rounding
+        wp_send_json_error('You can only move up to 50% of the original salary.');
+    }
+
+    // Execute Move
+    $target_salary = (float) get_post_meta($player_id, 'contract_' . $to_year, true);
+    
+    update_post_meta($player_id, 'contract_' . $from_year, $source_salary - $amount);
+    update_post_meta($player_id, 'contract_' . $to_year,   $target_salary + $amount);
+    update_field('has_been_restructured', 1, $player_id);
+
+    // Log Team Usage
+    add_row('restructure_usage_log', [
+        'team_id'     => $team_id,
+        'league_year' => $current_year,
+        'player_id'   => $player_id
+    ], 'option');
+
+    // Log Transaction
+    do_action('my_fantasy_transaction', [
+        'transaction_type' => 'Restructure',
+        'player_ids'       => [$player_id],
+        'primary_team'     => $team_id,
+        'league_id'        => $league_id,
+        'summary'          => get_the_title($player_id) . " contract restructured by $team_id. Moved $" . number_format($amount) . " from $from_year to $to_year."
+    ]);
+
+    wp_send_json_success('Contract successfully restructured.');
+}
+add_action('wp_ajax_process_restructure', 'fod_process_contract_restructure_handler');
+
+/**
+ * Helper: Check if team has used their restructure
+ */
+function fod_has_team_restructured_this_year($team_id, $year) {
+    $log = get_field('restructure_usage_log', 'option');
+    if ( !is_array($log) ) return false;
+    foreach ($log as $row) {
+        if ( ($row['team_id'] ?? '') === $team_id && ($row['league_year'] ?? '') == $year ) {
+            return true;
+        }
+    }
+    return false;
+}

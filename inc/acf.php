@@ -464,5 +464,126 @@ if( function_exists('acf_add_local_field_group') ) {
         'description' => 'Stores the bidding history for free agents.',
     ));
 
+    // Contract Restructure Tracking (Players)
+    acf_add_local_field_group(array(
+        'key' => 'group_player_restructure_status',
+        'title' => 'Restructure Status',
+        'fields' => array(
+            array(
+                'key' => 'field_has_been_restructured',
+                'label' => 'Has Been Restructured?',
+                'name' => 'has_been_restructured',
+                'type' => 'true_false',
+                'instructions' => 'Indicates if this contract has already been restructured.',
+                'ui' => 1,
+            ),
+        ),
+        'location' => array(
+            array(
+                array(
+                    'param' => 'post_type',
+                    'operator' => '==',
+                    'value' => 'playerdata',
+                ),
+            ),
+            array(
+                array(
+                    'param' => 'post_type',
+                    'operator' => '==',
+                    'value' => 'nbaplayer',
+                ),
+            ),
+        ),
+    ));
+
+    // Contract Restructure Tracking (Team usage per year)
+    acf_add_local_field_group(array(
+        'key' => 'group_team_restructure_tracker',
+        'title' => 'Team Restructure Tracker',
+        'fields' => array(
+            array(
+                'key' => 'field_restructure_usage_log',
+                'label' => 'Restructure Usage Log',
+                'name' => 'restructure_usage_log',
+                'type' => 'repeater',
+                'layout' => 'table',
+                'sub_fields' => array(
+                    array(
+                        'key' => 'field_restructure_log_team',
+                        'label' => 'Team ID',
+                        'name' => 'team_id',
+                        'type' => 'text',
+                    ),
+                    array(
+                        'key' => 'field_restructure_log_year',
+                        'label' => 'League Year',
+                        'name' => 'league_year',
+                        'type' => 'number',
+                    ),
+                    array(
+                        'key' => 'field_restructure_log_player',
+                        'label' => 'Player ID',
+                        'name' => 'player_id',
+                        'type' => 'number',
+                    ),
+                ),
+            ),
+        ),
+        'location' => array(
+            array(
+                array(
+                    'param' => 'options_page',
+                    'operator' => '==',
+                    'value' => 'site-custom-settings',
+                ),
+            ),
+        ),
+    ));
+
+    // Contract Extension Tracking (Team usage per year)
+    acf_add_local_field_group(array(
+        'key' => 'group_team_extension_tracker',
+        'title' => 'Team Extension Tracker',
+        'fields' => array(
+            array(
+                'key' => 'field_extension_usage_log',
+                'label' => 'Extension Usage Log',
+                'name' => 'extension_usage_log',
+                'type' => 'repeater',
+                'layout' => 'table',
+                'instructions' => 'Tracks which teams have used their 2 allowed contract extensions per year.',
+                'sub_fields' => array(
+                    array(
+                        'key' => 'field_extension_log_team',
+                        'label' => 'Team ID',
+                        'name' => 'team_id',
+                        'type' => 'text',
+                    ),
+                    array(
+                        'key' => 'field_extension_log_year',
+                        'label' => 'League Year',
+                        'name' => 'league_year',
+                        'type' => 'number',
+                    ),
+                    array(
+                        'key' => 'field_extension_log_player',
+                        'label' => 'Player ID',
+                        'name' => 'player_id',
+                        'type' => 'number',
+                    ),
+                ),
+            ),
+        ),
+        'location' => array(
+            array(
+                array(
+                    'param' => 'options_page',
+                    'operator' => '==',
+                    'value' => 'site-custom-settings',
+                ),
+            ),
+        ),
+    ));
+
 }
 

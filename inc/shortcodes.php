@@ -303,12 +303,129 @@ function display_manager_roster_shortcode() {
             </form>
         </div>
     </div>
+    <div id="restructure-modal" class="fantasy-modal fa-modal-hidden">
+        <div class="fa-modal-content" style="max-width: 500px;">
+            <span class="fa-modal-close"></span>
+            <h3>Contract Restructure</h3>
+            <div id="restructure-modal-message"></div>
+            
+            <div id="restructure-loading" style="padding: 20px; text-align: center;">Loading contract details...</div>
+            
+            <form id="restructure-form" style="display:none;">
+                <input type="hidden" id="restructure-player-id" name="player_id" value="">
+                
+                <p>You can move up to 50% of one year\'s salary to another year. This can only be done <strong>once per contract</strong>.</p>
+                
+                <div style="margin-bottom: 15px;">
+                    <label><strong>Move Salary From:</strong></label><br>
+                    <select id="restructure-from-year" name="from_year" style="width: 100%;" required></select>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label><strong>Move Salary To:</strong></label><br>
+                    <select id="restructure-to-year" name="to_year" style="width: 100%;" required></select>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label><strong>Amount to Move ($):</strong></label><br>
+                    <input type="number" id="restructure-amount" name="amount" style="width: 100%;" min="1" required>
+                    <small id="restructure-max-hint" style="color: #666;"></small>
+                </div>
+
+                <div id="restructure-preview" style="background: #f0f0f1; padding: 10px; border-radius: 4px; margin-bottom: 15px; display:none;">
+                    <strong>Preview:</strong><br>
+                    Year <span id="preview-from-yr"></span>: <span id="preview-from-amt" style="color:red;"></span><br>
+                    Year <span id="preview-to-yr"></span>: <span id="preview-to-amt" style="color:green;"></span>
+                </div>
+
+                <hr>
+                <button type="submit" id="restructure-submit-button" class="button button-primary">Execute Restructure</button>
+                <button type="button" class="button button-secondary fa-modal-cancel">Cancel</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Contract Extension Calculator Modal -->
+    <div id="extension-modal" class="fantasy-modal fa-modal-hidden">
+        <div class="fa-modal-content" style="max-width: 600px;">
+            <span class="fa-modal-close"></span>
+            <h3>Contract Extension Calculator</h3>
+            <div id="ext-message"></div>
+            
+            <form id="fod-extension-form">
+                <input type="hidden" id="ext-player-id" name="player_id" value="">
+                
+                <p><strong>Player:</strong> <span id="ext-player-name-display" style="font-weight:bold; color:#0073aa;"></span></p>
+
+                <!-- Position Tabs -->
+                <div class="fod-tabs">
+                    <button type="button" class="fod-tab active" data-pos="sp">Starting Pitcher</button>
+                    <button type="button" class="fod-tab" data-pos="rp">Relief Pitcher</button>
+                    <button type="button" class="fod-tab" data-pos="hitter">Hitter</button>
+                </div>
+                <input type="hidden" id="ext-position-type" name="position_type" value="sp">
+
+                <!-- WAR Inputs -->
+                <div class="fod-input-grid">
+                    <div class="fod-form-group">
+                        <label>1-Year WAR (Helper)</label>
+                        <input type="number" id="ext-war-1yr" step="0.1" placeholder="0.0">
+                    </div>
+                    <div class="fod-form-group">
+                        <label>2-Year WAR (Helper)</label>
+                        <input type="number" id="ext-war-2yr" step="0.1" placeholder="0.0">
+                    </div>
+                    <div class="fod-form-group main-input">
+                        <label>Total 3-Year WAR (Main)</label>
+                        <input type="number" id="ext-war-3yr" name="war_3yr" step="0.1" placeholder="0.0" required>
+                    </div>
+                </div>
+
+                <!-- Pricing Table -->
+                <div id="ext-pricing-table" class="hidden">
+                    <h4>Calculated Extension Offers</h4>
+                    <table class="fod-table" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>Years</th>
+                                <th>AAV ($)</th>
+                                <th>Total ($)</th>
+                                <th>Select</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ext-pricing-body">
+                            <!-- Rows generated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="ext-submit-area" class="hidden" style="margin-top: 20px; border-top: 1px solid #ddd; padding-top: 15px;">
+                    <p><strong>Selected Contract:</strong> <span id="ext-selected-summary">None</span></p>
+                    <button type="submit" id="ext-submit-btn" class="button button-primary">Submit Extension Request</button>
+                    <button type="button" class="button button-secondary fa-modal-cancel">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <style>
-    #il-modal.fa-modal-hidden, #dfa-modal.fa-modal-hidden { display: none !important; }
-    .il-duration-options, .dfa-options { display: flex; flex-direction: column; gap: 15px; margin: 20px 0; }
-    .il-duration-options div, .dfa-options div { display: flex; align-items: center; gap: 8px; }
-    .il-duration-options input[type="radio"], .dfa-options input[type="radio"] { width: 20px; height: 20px; }
-    .il-duration-options label, .dfa-options label { font-size: 1.1em; margin-bottom: 0; }
+    #restructure-modal.fa-modal-hidden, #extension-modal.fa-modal-hidden { display: none !important; }
+    .restructure-player-button:hover { background-color: #512da8 !important; }
+    .extend-player-button:hover { background-color: #006799 !important; }
+    
+    /* Extension Modal Styles */
+    .fod-form-group { margin-bottom: 15px; }
+    .fod-tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 15px; }
+    .fod-tab { flex: 1; padding: 10px; border: none; background: #f1f1f1; cursor: pointer; font-weight: bold; }
+    .fod-tab.active { background: #0073aa; color: white; }
+    .fod-input-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .fod-input-grid input { width: 100%; }
+    .main-input input { border: 2px solid #0073aa; background-color: #f0f7ff; font-weight: bold; }
+    .fod-table th, .fod-table td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+    .fod-table th { background: #f9f9f9; }
+    .fod-row-select { cursor: pointer; }
+    .fod-row-selected { background-color: #d1e7dd !important; }
+    .hidden { display: none; }
     </style>
     <?php
 

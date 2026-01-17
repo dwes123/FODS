@@ -50,7 +50,11 @@ function twentytwentytwo_child_enqueue_styles() {
     }
     if ( function_exists('get_post') ) {
         $post = get_post();
-        if ( $post && ( has_shortcode( $post->post_content, 'fa_bidding_history' ) || has_shortcode( $post->post_content, 'fa_bid_calculator' ) ) ) {
+        if ( $post && ( 
+            has_shortcode( $post->post_content, 'fa_bidding_history' ) || 
+            has_shortcode( $post->post_content, 'fa_bid_calculator' ) || 
+            has_shortcode( $post->post_content, 'my_team_roster' ) 
+        ) ) {
             $load_fa_modal_js = true;
         }
     }
@@ -74,6 +78,13 @@ function twentytwentytwo_child_enqueue_styles() {
                 'claim_player_nonce'        => wp_create_nonce('claim_player_nonce'),
             )
         );
+
+        // Enqueue Extension Calculator (for Roster Page)
+        wp_enqueue_script('fod-extension-js', get_stylesheet_directory_uri() . '/js/extension-calculator.js', array('jquery'), '1.0', true);
+        wp_localize_script('fod-extension-js', 'fodExtData', array(
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('extension_calc_nonce')
+        ));
     }
 
     // --- NEW: Load jQuery for Rotation & Arbitration Submission Pages ---
