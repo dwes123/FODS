@@ -613,7 +613,19 @@ function handle_sign_free_agent_action() {
     }
 
     $now_mysql   = current_time('mysql', true);
-    $bid_end_time = date('Y-m-d H:i:s', strtotime($now_mysql . ' +48 hours'));
+    
+    // --- Determine Bid Duration (24h In-Season, 48h Offseason) ---
+    $current_year = date('Y');
+    $opening_day = fod_get_opening_day($league_id, $current_year);
+    $today_ymd = date('Ymd');
+    $end_of_season = $current_year . '1001'; // Oct 1st cutoff
+    
+    $hours_to_add = 48; // Default Offseason
+    if ( $opening_day && $today_ymd >= $opening_day && $today_ymd <= $end_of_season ) {
+        $hours_to_add = 24; // In-Season
+    }
+    
+    $bid_end_time = date('Y-m-d H:i:s', strtotime($now_mysql . ' +' . $hours_to_add . ' hours'));
 
     update_post_meta($player_id, 'fa_status', 'pending_bid');
     update_post_meta($player_id, 'pending_bid_team_id', $team_id);
