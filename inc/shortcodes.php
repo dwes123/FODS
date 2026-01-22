@@ -221,12 +221,33 @@ function display_manager_roster_shortcode() {
     $isbp_bal = fod_get_team_isbp_balance($selected_league_id, $selected_team_id);
     $milb_bal = fod_get_team_milb_balance($selected_league_id, $selected_team_id);
     
-    echo '<h4>Team Financial Allowances</h4>';
+    // Calculate Usage Counts (Extensions & Restructures)
+    $current_year = date('Y');
+    $ext_count = 0;
+    $res_count = 0;
+    
+    $ext_log = get_field('extension_usage_log', 'option');
+    if (is_array($ext_log)) {
+        foreach ($ext_log as $log) {
+            if (($log['team_id']??'') === $selected_team_id && (int)($log['league_year']??0) === (int)$current_year) $ext_count++;
+        }
+    }
+    
+    $res_log = get_field('restructure_usage_log', 'option');
+    if (is_array($res_log)) {
+        foreach ($res_log as $log) {
+            if (($log['team_id']??'') === $selected_team_id && (int)($log['league_year']??0) === (int)$current_year) $res_count++;
+        }
+    }
+
+    echo '<h4>Front Office Allowance</h4>';
     echo '<table class="fantasy-table-base" style="width: auto; margin-bottom: 30px;">';
-    echo '<thead><tr><th>Allowance Type</th><th>Balance</th></tr></thead>';
+    echo '<thead><tr><th>Allowance Type</th><th>Status</th></tr></thead>';
     echo '<tbody>';
     echo '<tr><td><strong>ISBP Balance</strong></td><td>$' . number_format($isbp_bal) . '</td></tr>';
     echo '<tr><td><strong>MILB Allowance</strong></td><td>$' . number_format($milb_bal) . '</td></tr>';
+    echo '<tr><td><strong>Contract Extensions</strong></td><td>' . $ext_count . ' / 2 Used</td></tr>';
+    echo '<tr><td><strong>Restructures</strong></td><td>' . $res_count . ' / 1 Used</td></tr>';
     echo '</tbody></table>';
 
     // Salary Table
@@ -848,6 +869,13 @@ function display_trade_proposal_form_shortcode() {
             <span id="players-requested-loading" style="display: none;">Loading target players...</span>
         </p>
 
+        <!-- Salary Retention UI -->
+        <div id="salary-retention-container" style="margin: 20px 0; border: 1px solid #ddd; padding: 15px; background: #f9f9f9; display:none;">
+            <strong>Salary Retention Options (50% of Current Year):</strong>
+            <div id="retention-checkboxes"></div>
+            <input type="hidden" name="retained_player_ids" id="retained_player_ids">
+        </div>
+
         <div class="trade-isbp-section" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0;">
             <p>
                 <label for="isbp_offered">ISBP $ to Offer:</label><br>
@@ -895,67 +923,8 @@ function display_trade_proposal_form_shortcode() {
             </div>
         </div>
 
-        <p>
-            <label for="trade_comments">Comments (Optional):</label><br>
-            <textarea name="trade_comments" id="trade_comments" rows="4" style="width: 100%;"></textarea>
-        </p>
         <p><button type="submit" id="propose-trade-submit" disabled>Propose Trade</button></p>
     </form>
-    <script>
-    jQuery(document).ready(function($) {
-        $('#trade_league').on('change', function() {
-            var leagueId = $(this).val();
-            console.log('League changed to: ' + leagueId);
-
-            if (!leagueId) {
-                $('#target_manager').prop('disabled', true).html('<option value="">-- Select League First --</option>');
-                $('#players_offered, #players_requested').prop('disabled', true).html('<option value="" disabled>-- Select League First --</option>');
-                return;
-            }
-
-            // Check if trading is allowed for this league
-            $.ajax({
-                url: '<?php echo admin_url('admin-ajax.php'); ?>',
-                type: 'POST',
-                data: {
-                    action: 'check_league_trade_status',
-                    league_id: leagueId
-                },
-                success: function(response) {
-                    if (response.success && response.data.can_trade) {
-                        $('#trade-deadline-notice').hide();
-                        $('#target_manager').prop('disabled', false);
-                        // ... existing logic to load managers ...
-                    } else {
-                        $('#trade-deadline-notice').text('Trading is currently closed for the ' + leagueId + ' league (Trade Deadline has passed).').show();
-                        $('#target_manager, #players_offered, #players_requested').prop('disabled', true);
-                        $('#propose-trade-submit').prop('disabled', true);
-                    }
-                }
-            });
-        });
-
-        $('#target_manager').on('change', function() {
-            var managerId = $(this).val();
-            var leagueId = $('#trade_league').val();
-            console.log('Target manager changed to: ' + managerId);
-            console.log('League ID for target players: ' + leagueId);
-
-            $.ajax({
-                url: '<?php echo admin_url('admin-ajax.php'); ?>',
-                type: 'POST',
-                data: {
-                    action: 'get_target_players_for_trade',
-                    league_id: leagueId,
-                    manager_id: managerId
-                },
-                success: function(response) {
-                    console.log('Target players response:', response);
-                }
-            });
-        });
-    });
-    </script>
     <?php
     return ob_get_clean();
 }

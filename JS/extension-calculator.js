@@ -143,9 +143,11 @@ jQuery(document).ready(function($) {
 
     // --- Row Selection ---
     $(document).on('click', '.fod-row-select, .select-contract-btn', function(e) {
+        console.log("Extension row or button clicked!");
         // Handle button click bubbling
         e.stopPropagation();
         let row = $(this).closest('tr');
+        console.log("Closest TR:", row);
         
         // Visual selection
         $('.fod-row-select').removeClass('fod-row-selected');
@@ -157,11 +159,17 @@ jQuery(document).ready(function($) {
             aavRaw: parseInt(row.data('aav-raw')),
             aavDisplay: row.data('aav-display')
         };
+        console.log("Selected Contract:", selectedContract);
 
         // Update Summary
         const summary = `${selectedContract.years} Year${selectedContract.years > 1 ? 's' : ''} @ $${selectedContract.aavDisplay}m / yr`;
         $('#ext-selected-summary').text(summary);
         $('#ext-submit-area').removeClass('hidden');
+
+        // Scroll to submit area for mobile users
+        setTimeout(function() {
+            document.getElementById('ext-submit-area').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
     });
 
     // --- Submission ---

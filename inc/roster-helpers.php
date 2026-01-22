@@ -158,13 +158,24 @@ function fod_render_player_roster_row( $player_id, $config, & $salary_totals ) {
                 $tr .= '<button type="button" class="button promote-40-button" ' . $common_data_attrs . '>Move to 40-Man</button>';
             }
             
-            // Add Restructure Button (Offseason only)
-            if ( $is_offseason && !get_field('has_been_restructured', $player_id) ) {
+            // Check for restricted contract status (TC or ARB)
+            $has_restricted_contract = false;
+            $check_years = range((int)date('Y'), (int)date('Y') + 7);
+            foreach ($check_years as $cy) {
+                $val = get_post_meta($player_id, 'contract_' . $cy, true);
+                if (stripos($val, 'TC') !== false || stripos($val, 'ARB') !== false) {
+                    $has_restricted_contract = true;
+                    break;
+                }
+            }
+
+            // Add Restructure Button (Offseason only, no TC/ARB)
+            if ( $is_offseason && !get_field('has_been_restructured', $player_id) && !$has_restricted_contract ) {
                 $tr .= '<button type="button" class="button restructure-player-button" ' . $common_data_attrs . ' style="background-color: #673ab7; color: white; border-color: #512da8;">Restructure</button>';
             }
 
-            // Add Extend Button (Offseason only)
-            if ( $is_offseason ) {
+            // Add Extend Button (Offseason only, no TC/ARB)
+            if ( $is_offseason && !$has_restricted_contract ) {
                 $tr .= '<button type="button" class="button extend-player-button" ' . $common_data_attrs . ' data-position="' . esc_attr($position) . '" style="background-color: #0073aa; color: white; border-color: #006799;">Extend</button>';
             }
 
@@ -185,9 +196,12 @@ function fod_render_player_roster_row( $player_id, $config, & $salary_totals ) {
     $tr .= '<td>' . esc_html( $rule_5_year ?: '–' ) . '</td>';
 
     // Salary columns
+    $option_years = get_field('contract_option_years', $player_id) ?: [];
     foreach ( $years_to_process as $yr ) {
         $v    = get_post_meta( $player_id, 'contract_' . $yr, true );
-        $cell = ( is_numeric( $v ) ) ? '$' . number_format( (float) $v, 0 ) : ( ( $v === '' || $v === null ) ? '–' : esc_html( $v ) );
+        $suffix = in_array((string)$yr, $option_years) ? ' (TO)' : '';
+        
+        $cell = ( is_numeric($v) ) ? '$' . number_format( (float) $v, 0 ) . $suffix : ( ( $v === '' || $v === null ) ? '–' : esc_html( $v ) . $suffix );
         $tr   .= '<td>' . $cell . '</td>';
         if ( $v !== '' && $v !== null ) {
             $clean = str_replace( ',', '', (string) $v );
@@ -418,4 +432,23 @@ function fod_can_trade( $league_id ) {
     $now_ymd = date('Ymd', current_time('timestamp'));
     
     return ( $now_ymd <= $deadline );
+}
+
+/**
+ * Retrieves the Opening Day for a specific league and year.
+ *
+ * @param string $league_id
+ * @param int    $year
+ * @return string|false Ymd date string or false if not found.
+ */
+function fod_get_opening_day( $league_id, $year ) {
+    $opening_days = get_field( 'opening_days', 'option' );
+    if ( is_array( $opening_days ) ) {
+        foreach ( $opening_days as $row ) {
+            if ( (int) $row['year'] === (int) $year && $row['league_id'] === $league_id ) {
+                return $row['opening_date']; // Expecting Ymd format
+            }
+        }
+    }
+    return false;
 }

@@ -56,6 +56,9 @@ require_once get_stylesheet_directory() . '/inc/bug-reports.php';
 // Load Contract Extension Calculator
 require_once get_stylesheet_directory() . '/inc/contract-extensions.php';
 
+// Load Team Options decision tool
+require_once get_stylesheet_directory() . '/inc/team-options.php';
+
 // Load Mobile API Endpoints
 require_once get_stylesheet_directory() . '/inc/api-endpoints.php';
 

@@ -202,6 +202,43 @@ if( function_exists('acf_add_local_field_group') ) {
                     ),
                 ),
             ),
+            array(
+                'key' => 'field_opening_days',
+                'label' => 'Opening Days',
+                'name' => 'opening_days',
+                'type' => 'repeater',
+                'instructions' => 'Set the Opening Day for each league and year.',
+                'layout' => 'table',
+                'button_label' => 'Add Opening Day',
+                'sub_fields' => array(
+                    array(
+                        'key' => 'field_opening_day_year',
+                        'label' => 'Year',
+                        'name' => 'year',
+                        'type' => 'number',
+                        'placeholder' => '2026',
+                    ),
+                    array(
+                        'key' => 'field_opening_day_league',
+                        'label' => 'League',
+                        'name' => 'league_id',
+                        'type' => 'select',
+                        'choices' => array(
+                            'MLB' => 'MLB',
+                            'AAA' => 'AAA',
+                            'AA'  => 'AA',
+                        ),
+                    ),
+                    array(
+                        'key' => 'field_opening_day_date',
+                        'label' => 'Opening Day Date',
+                        'name' => 'opening_date',
+                        'type' => 'date_picker',
+                        'display_format' => 'F j, Y',
+                        'return_format' => 'Ymd',
+                    ),
+                ),
+            ),
         ),
         'location' => array(
             array(
@@ -580,6 +617,79 @@ if( function_exists('acf_add_local_field_group') ) {
                     'param' => 'options_page',
                     'operator' => '==',
                     'value' => 'site-custom-settings',
+                ),
+            ),
+        ),
+    ));
+
+    // Team Options Field
+    acf_add_local_field_group(array(
+        'key' => 'group_player_contract_options',
+        'title' => 'Team Options',
+        'fields' => array(
+            array(
+                'key' => 'field_contract_option_years',
+                'label' => 'Team Option Years',
+                'name' => 'contract_option_years',
+                'type' => 'select',
+                'instructions' => 'Select years that are Team Options.',
+                'choices' => array(
+                    '2026' => '2026',
+                    '2027' => '2027',
+                    '2028' => '2028',
+                    '2029' => '2029',
+                    '2030' => '2030',
+                    '2031' => '2031',
+                    '2032' => '2032',
+                    '2033' => '2033',
+                    '2034' => '2034',
+                    '2035' => '2035',
+                ),
+                'allow_null' => 1,
+                'multiple' => 1,
+                'ui' => 1,
+                'ajax' => 0,
+                'return_format' => 'value',
+                'placeholder' => '',
+            ),
+        ),
+        'location' => array(
+            array(
+                array(
+                    'param' => 'post_type',
+                    'operator' => '==',
+                    'value' => 'playerdata',
+                ),
+            ),
+            array(
+                array(
+                    'param' => 'post_type',
+                    'operator' => '==',
+                    'value' => 'nbaplayer',
+                ),
+            ),
+        ),
+    ));
+
+    // Trade Retention Field
+    acf_add_local_field_group(array(
+        'key' => 'group_trade_retention',
+        'title' => 'Trade Retention Details',
+        'fields' => array(
+            array(
+                'key' => 'field_retained_salary_players',
+                'label' => 'Players with Retained Salary (50%)',
+                'name' => 'retained_salary_players',
+                'type' => 'text',
+                'instructions' => 'Comma-separated list of Player IDs who have 50% salary retained by the sending team.',
+            ),
+        ),
+        'location' => array(
+            array(
+                array(
+                    'param' => 'post_type',
+                    'operator' => '==',
+                    'value' => 'trade_proposal',
                 ),
             ),
         ),

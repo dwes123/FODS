@@ -114,6 +114,7 @@ function handle_trade_proposal_submission() {
     $isbp_offered         = isset($_POST['isbp_offered']) ? absint($_POST['isbp_offered']) : 0;
     $isbp_requested       = isset($_POST['isbp_requested']) ? absint($_POST['isbp_requested']) : 0;
     $trade_comments       = isset($_POST['trade_comments']) ? sanitize_textarea_field(wp_unslash($_POST['trade_comments'])) : '';
+    $retained_ids_str     = isset($_POST['retained_player_ids']) ? sanitize_text_field(wp_unslash($_POST['retained_player_ids'])) : '';
 
     $offered_player_ids   = array_filter($offered_player_ids);
     $requested_player_ids = array_filter($requested_player_ids);
@@ -137,6 +138,7 @@ function handle_trade_proposal_submission() {
         update_field('isbp_offered', $isbp_offered, $new_post_id);
         update_field('isbp_requested', $isbp_requested, $new_post_id);
         update_field('trade_comments', $trade_comments, $new_post_id);
+        update_field('retained_salary_players', $retained_ids_str, $new_post_id); // Save retention data
         update_field('trade_status', 'pending', $new_post_id);
 
         $target_user_info = get_userdata($target_manager_id);
@@ -152,10 +154,19 @@ function handle_trade_proposal_submission() {
             $requested_list = !empty($requested_player_ids) ? implode(', ', array_map('get_the_title', $requested_player_ids)) : 'No players';
             if ($isbp_requested > 0) $requested_list .= " + $" . number_format($isbp_requested) . " ISBP";
             
+            // retention notice in email
+            $retention_note = "";
+            if (!empty($retained_ids_str)) {
+                $r_ids = explode(',', $retained_ids_str);
+                $r_names = array_map('get_the_title', $r_ids);
+                $retention_note = "\n(Includes 50% Salary Retention for: " . implode(', ', $r_names) . ")";
+            }
+
             $message  = "Hello " . esc_html($target_user_info->display_name) . ",\n\n";
             $message .= esc_html($proposer_name) . " has proposed a trade with you in the " . esc_html($selected_league) . " league.\n\n";
             $message .= "They Offer: " . $offered_list . "\n";
-            $message .= "They Request: " . $requested_list . "\n\n";
+            $message .= "They Request: " . $requested_list . "\n";
+            $message .= $retention_note . "\n\n";
             if ( ! empty( $trade_comments ) ) {
                 $message .= "Comments: " . esc_html($trade_comments) . "\n\n";
             }
@@ -406,6 +417,82 @@ function handle_accept_trade() {
     foreach ($offered_ids as $pid) { update_field('fantasy_team_id', $target_team, $pid); }
     foreach ($requested_ids as $pid) { update_field('fantasy_team_id', $proposer_team, $pid); }
 
+    // --- Process Salary Retention (Mandatory Date-Based + Optional Checkbox) ---
+    $retained_str = get_field('retained_salary_players', $trade_id);
+    $retained_ids = !empty($retained_str) ? explode(',', $retained_str) : [];
+    $all_traded_ids = array_merge($offered_ids, $requested_ids);
+    $current_year = date('Y');
+    
+    // Date-Based Logic
+    $today_ymd = date('Ymd');
+    $curr_yr = date('Y');
+    $opening_day = fod_get_opening_day($league_id, $curr_yr);
+    $april_30 = $curr_yr . '0430';
+    $may_31   = $curr_yr . '0531';
+    $june_1   = $curr_yr . '0601';
+
+    $pro_rate_pct = 0.0; 
+    if ( $opening_day && $today_ymd >= $opening_day && $today_ymd <= $april_30 ) {
+        $pro_rate_pct = 0.10; 
+    } elseif ( $today_ymd >= ($curr_yr . '0501') && $today_ymd <= $may_31 ) {
+        $pro_rate_pct = 0.25; 
+    } elseif ( $today_ymd >= $june_1 ) {
+        $pro_rate_pct = 0.50; 
+    }
+
+    foreach ($all_traded_ids as $pid) {
+        $pid = (int) $pid;
+        if (!$pid) continue;
+
+        // Determine Sender
+        $sender_team = '';
+        if (in_array($pid, $offered_ids)) {
+            $sender_team = $proposer_team;
+        } elseif (in_array($pid, $requested_ids)) {
+            $sender_team = $target_team;
+        }
+
+        if ($sender_team) {
+            $raw_salary = get_post_meta($pid, 'contract_' . $current_year, true);
+            $salary_val = (float) str_replace([',', '$'], '', $raw_salary);
+            
+            if ($salary_val > 0) {
+                // 1. Mandatory Date-Based Retention
+                $base_dead_cap = $salary_val * $pro_rate_pct;
+                $remaining_salary = $salary_val - $base_dead_cap;
+
+                // 2. Optional 50% Retention (on remainder)
+                $extra_retention = 0.0;
+                if (in_array($pid, $retained_ids)) {
+                    $extra_retention = $remaining_salary * 0.50;
+                }
+
+                $total_dead_cap = $base_dead_cap + $extra_retention;
+                $final_receiver_salary = $salary_val - $total_dead_cap;
+
+                // Apply Updates
+                if ( $total_dead_cap > 0 ) {
+                    // Update Contract
+                    update_post_meta($pid, 'contract_' . $current_year, $final_receiver_salary);
+
+                    // Add Dead Cap
+                    if ( function_exists('add_row') ) {
+                        $note = 'Pro-Rated (' . ($pro_rate_pct*100) . '%)';
+                        if ($extra_retention > 0) $note .= ' + 50% Retained';
+                        
+                        $penalty = [
+                            'penalty_year' => $current_year,
+                            'penalty_amount' => $total_dead_cap,
+                            'dead_cap_team_id' => $sender_team,
+                            'penalty_type' => $note
+                        ];
+                        add_row('dead_cap_penalties', $penalty, $pid);
+                    }
+                }
+            }
+        }
+    }
+
     // --- Transfer ISBP Funds (Central Options Table) ---
     $transfer_isbp = function($league, $from_team, $to_team, $amount) {
         if ($amount <= 0 || !$from_team || !$to_team) return;
@@ -639,6 +726,35 @@ function promote_to_40man_ajax_handler() {
     if ( !is_user_owner_of_player( get_current_user_id(), $player_id ) ) { wp_send_json_error('You do not have permission to manage this player.'); wp_die(); }
 
     update_post_meta($player_id, 'status_40_man', 'X');
+
+    // --- Auto-Apply Rookie Contract if Missing ---
+    // Rule: If promoted to 40-man for the first time (empty contract), apply 760k -> TC -> TC -> ARB -> ARB -> ARB -> UFA
+    $current_month = (int)date('n');
+    $start_year = (int)date('Y');
+    // If it's Nov or Dec, we assume this is a roster move for the UPCOMING season (e.g. Rule 5 protection)
+    if ($current_month >= 11) {
+        $start_year++;
+    }
+
+    // Check if contract exists for start year
+    $existing_contract = get_post_meta($player_id, 'contract_' . $start_year, true);
+    
+    if ( empty($existing_contract) ) {
+        $structure = [
+            0 => '760000',
+            1 => 'TC',
+            2 => 'TC',
+            3 => 'ARB 1',
+            4 => 'ARB 2',
+            5 => 'ARB 3',
+            6 => 'UFA'
+        ];
+
+        foreach ($structure as $offset => $val) {
+            update_post_meta($player_id, 'contract_' . ($start_year + $offset), $val);
+        }
+    }
+    // ---------------------------------------------
 
     // Log Transaction
     $player_name = get_the_title($player_id);

@@ -191,6 +191,56 @@ jQuery(document).ready(function($) {
         updateTradePreview();
     }
 
+    function updateRetentionUI() {
+        var container = $('#retention-checkboxes');
+        var wrapper = $('#salary-retention-container');
+        container.empty();
+        
+        var selectedIds = [];
+        var selectedNames = [];
+
+        // Get Offered Players
+        $(playersOfferedSelectId + ' option:selected').each(function() {
+            selectedIds.push($(this).val());
+            selectedNames.push($(this).text());
+        });
+
+        // Get Requested Players
+        $(playersRequestedSelectId + ' option:selected').each(function() {
+            selectedIds.push($(this).val());
+            selectedNames.push($(this).text());
+        });
+
+        if (selectedIds.length === 0) {
+            wrapper.hide();
+            $('#retained_player_ids').val('');
+            return;
+        }
+
+        wrapper.show();
+        
+        selectedIds.forEach(function(pid, index) {
+            var name = selectedNames[index];
+            var checkboxId = 'retain_' + pid;
+            var html = '<div style="margin-bottom: 5px;">';
+            html += '<input type="checkbox" class="retention-check" id="' + checkboxId + '" value="' + pid + '">';
+            html += ' <label for="' + checkboxId + '">Retain 50% for <strong>' + name + '</strong></label>';
+            html += '</div>';
+            container.append(html);
+        });
+        
+        // Restore checked state if re-rendering (optional complexity, skipping for now to keep simple)
+    }
+
+    $(document).on('change', '.retention-check', function() {
+        var retained = [];
+        $('.retention-check:checked').each(function() {
+            retained.push($(this).val());
+        });
+        $('#retained_player_ids').val(retained.join(','));
+        updateTradePreview(); // Recalculate impact
+    });
+
     function updateTradePreview() {
         const preview = $('#trade-summary-preview');
         const offeredList = $('#preview-offered-list');
@@ -209,6 +259,31 @@ jQuery(document).ready(function($) {
         const selectedRequestedIds = $(playersRequestedSelectId).val() || [];
         const isbpOfferedVal = parseInt($('#isbp_offered').val()) || 0;
         const isbpRequestedVal = parseInt($('#isbp_requested').val()) || 0;
+        
+        // Get Retained IDs
+        const retainedVal = $('#retained_player_ids').val();
+        const retainedIds = (retainedVal || '').split(',').filter(x => x);
+        const currentYear = new Date().getFullYear().toString();
+
+        // Calculate dynamic retention percentage (Date-Based Pro-Rating)
+        let proRatePct = 0.0;
+        const now = new Date();
+        const todayStr = now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0');
+        const openingDay = tradeFormAjax.opening_day; // Ymd
+        
+        const april30 = currentYear + '0430';
+        const may31 = currentYear + '0531';
+        const june1 = currentYear + '0601';
+
+        if (openingDay && todayStr >= openingDay && todayStr <= april30) {
+            proRatePct = 0.10;
+        } else if (todayStr >= (currentYear + '0501') && todayStr <= may31) {
+            proRatePct = 0.25;
+        } else if (todayStr >= june1) {
+            proRatePct = 0.50;
+        }
+
+        console.log("Date-Based Pro-Rate %:", (proRatePct * 100) + "%");
 
         if (selectedOfferedIds.length === 0 && selectedRequestedIds.length === 0 && isbpOfferedVal === 0 && isbpRequestedVal === 0) {
             preview.hide();
@@ -218,9 +293,9 @@ jQuery(document).ready(function($) {
         preview.show();
 
         let totals = {
-            2026: { out: 0, in: 0 },
-            2027: { out: 0, in: 0 },
-            2028: { out: 0, in: 0 }
+            [currentYear]: { out: 0, in: 0 },
+            [parseInt(currentYear)+1]: { out: 0, in: 0 },
+            [parseInt(currentYear)+2]: { out: 0, in: 0 }
         };
 
         const parseSalary = (val) => {
@@ -229,24 +304,62 @@ jQuery(document).ready(function($) {
             return isNaN(clean) ? 0 : parseFloat(clean);
         };
 
-        selectedOfferedIds.each ? selectedOfferedIds.each(function() {
-            // Standard jQuery select multiple returns an array directly
-        }) : null;
+        const calculateNetImpact = (salary, isRetained, yr) => {
+            if (String(yr) !== String(currentYear)) return salary;
+            
+            // 1. Mandatory Pro-Rating
+            let baseDeadCap = salary * proRatePct;
+            let remainder = salary - baseDeadCap;
+            
+            // 2. Optional 50% Retention
+            let extraRetention = 0;
+            if (isRetained) {
+                extraRetention = remainder * 0.5;
+            }
+            
+            let totalDeadCap = baseDeadCap + extraRetention;
+            let finalReceiverCost = salary - totalDeadCap;
+            
+            return finalReceiverCost;
+        };
 
-        // Correct way to iterate selected IDs
         selectedOfferedIds.forEach(id => {
             const p = myPlayersCache[id];
             if (p) {
-                offeredList.append('<li>' + p.name + '</li>');
-                Object.keys(totals).forEach(yr => { totals[yr].out += parseSalary(p.salaries[yr]); });
+                let retentionLabel = '';
+                let isRetained = retainedIds.includes(String(id));
+                
+                if (isRetained) { retentionLabel = ' (50% Retained)'; }
+                else if (proRatePct > 0) { retentionLabel = ' (Pro-Rated)'; }
+                
+                offeredList.append('<li>' + p.name + retentionLabel + '</li>');
+                
+                Object.keys(totals).forEach(yr => {
+                    let salary = parseSalary(p.salaries[yr]);
+                    // Amount "OUT" is the amount saved (transferred to receiver)
+                    let savedAmount = calculateNetImpact(salary, isRetained, yr);
+                    totals[yr].out += savedAmount;
+                });
             }
         });
 
         selectedRequestedIds.forEach(id => {
             const p = targetPlayersCache[id];
             if (p) {
-                requestedList.append('<li>' + p.name + '</li>');
-                Object.keys(totals).forEach(yr => { totals[yr].in += parseSalary(p.salaries[yr]); });
+                let retentionLabel = '';
+                let isRetained = retainedIds.includes(String(id));
+                
+                if (isRetained) { retentionLabel = ' (50% Retained)'; }
+                else if (proRatePct > 0) { retentionLabel = ' (Pro-Rated)'; }
+
+                requestedList.append('<li>' + p.name + retentionLabel + '</li>');
+                
+                Object.keys(totals).forEach(yr => {
+                    let salary = parseSalary(p.salaries[yr]);
+                    // Amount "IN" is the amount inherited
+                    let costAmount = calculateNetImpact(salary, isRetained, yr);
+                    totals[yr].in += costAmount;
+                });
             }
         });
 
@@ -285,8 +398,16 @@ jQuery(document).ready(function($) {
         validateFormState();
     });
 
-    $(playersOfferedSelectId).on('change', function() { validateFormState(); });
-    $(playersRequestedSelectId).on('change', function() { validateFormState(); });
+    $(playersOfferedSelectId).on('change', function() { 
+        updateRetentionUI(); 
+        validateFormState(); 
+    });
+    
+    $(playersRequestedSelectId).on('change', function() { 
+        updateRetentionUI(); 
+        validateFormState(); 
+    });
+    
     $('#isbp_offered, #isbp_requested').on('input', function() { validateFormState(); });
 
     // Initial state

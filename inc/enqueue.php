@@ -32,13 +32,17 @@ function twentytwentytwo_child_enqueue_styles() {
     }
 
     if ( $load_trade_js ) {
-        wp_enqueue_script('trade-form-ajax-script', get_stylesheet_directory_uri() . '/js/trade-form-ajax.js', array('jquery'), '1.3', true);
+        wp_enqueue_script('trade-form-ajax-script', get_stylesheet_directory_uri() . '/js/trade-form-ajax.js', array('jquery'), '1.5', true);
+        
+        $curr_yr = date('Y');
         wp_localize_script(
             'trade-form-ajax-script', 
             'tradeFormAjax', 
             array(
                 'ajax_url' => admin_url('admin-ajax.php'), 
-                'nonce' => wp_create_nonce('trade_form_nonce')
+                'nonce' => wp_create_nonce('trade_form_nonce'),
+                'opening_day' => fod_get_opening_day('MLB', $curr_yr),
+                'trade_deadline' => fod_get_trade_deadline('MLB', $curr_yr)
             )
         );
     }
@@ -53,7 +57,8 @@ function twentytwentytwo_child_enqueue_styles() {
         if ( $post && ( 
             has_shortcode( $post->post_content, 'fa_bidding_history' ) || 
             has_shortcode( $post->post_content, 'fa_bid_calculator' ) || 
-            has_shortcode( $post->post_content, 'my_team_roster' ) 
+            has_shortcode( $post->post_content, 'my_team_roster' ) ||
+            has_shortcode( $post->post_content, 'free_agent_list' )
         ) ) {
             $load_fa_modal_js = true;
         }
