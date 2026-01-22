@@ -74,6 +74,7 @@ function twentytwentytwo_child_enqueue_styles() {
                 'nonce'                     => wp_create_nonce('fa_modal_nonce_action'),
                 'roster_move_nonce'         => wp_create_nonce('roster_move_nonce'),
                 'get_fa_sign_nonce'         => wp_create_nonce('get_fa_sign_nonce'),
+                'sign_fa_nonce_milb'        => wp_create_nonce('sign_fa_nonce_milb'),
                 'move_to_il_nonce'          => wp_create_nonce('move_to_il_nonce'),
                 'activate_from_il_nonce'    => wp_create_nonce('activate_from_il_nonce'),
                 'promote_to_26man_nonce'    => wp_create_nonce('promote_to_26man_nonce'),

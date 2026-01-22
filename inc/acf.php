@@ -514,6 +514,26 @@ if( function_exists('acf_add_local_field_group') ) {
                 'instructions' => 'Indicates if this contract has already been restructured.',
                 'ui' => 1,
             ),
+            // NEW: Bid Type Tracking
+            array(
+                'key' => 'field_bid_type',
+                'label' => 'Current Bid Type',
+                'name' => 'bid_type',
+                'type' => 'select',
+                'choices' => array(
+                    'standard' => 'Standard (Free Agent)',
+                    'milb' => 'Minor League Contract',
+                ),
+                'default_value' => 'standard',
+                'ui' => 1,
+            ),
+            array(
+                'key' => 'field_milb_qualifying_stat',
+                'label' => 'MiLB Qualification',
+                'name' => 'milb_qualifying_stat',
+                'type' => 'text', // e.g. "25 IP"
+                'instructions' => 'Stats entered to qualify for MiLB deal.',
+            ),
         ),
         'location' => array(
             array(

@@ -296,4 +296,104 @@ jQuery(document).ready(function($) {
 
         resModal.find('.fa-modal-close, .fa-modal-cancel').on('click', function() { resModal.addClass('fa-modal-hidden'); });
     }
+
+    // --- 8. MiLB Offer Modal ---
+    var milbModal = $('#fa-milb-modal');
+    if (milbModal.length) {
+        var milbForm = $('#fa-milb-form');
+        var balanceDisplay = $('#milb-balance-display');
+        var currentMilbBalance = 0;
+
+        $(document).on('click', '.fa-milb-offer-button', function(e) {
+            e.preventDefault();
+            var btn = $(this);
+            
+            $('#milb-player-id').val(btn.data('playerid'));
+            $('#milb-league-id').val(btn.data('leagueid'));
+            $('#milb-team-id').val(btn.data('teamid'));
+            $('#milb-player-name').text(btn.data('playername'));
+            $('#milb-stat-value').val('');
+            $('#milb-bid-amount').val('');
+            $('#milb-modal-message').html('');
+            balanceDisplay.text('Loading...');
+            
+            milbModal.removeClass('fa-modal-hidden');
+
+            // Fetch Balance
+            $.ajax({
+                url: faModalData.ajax_url,
+                type: 'POST',
+                data: { 
+                    action: 'get_team_financials', 
+                    league_id: btn.data('leagueid'), 
+                    team_id: btn.data('teamid') 
+                },
+                success: function(res) {
+                    if (res.success) {
+                        currentMilbBalance = parseInt(res.data.milb);
+                        balanceDisplay.text('Available: $' + currentMilbBalance.toLocaleString());
+                        $('#milb-bid-amount').attr('max', currentMilbBalance);
+                    } else {
+                        balanceDisplay.text('Error loading balance.');
+                    }
+                }
+            });
+        });
+
+        milbForm.on('submit', function(e) {
+            e.preventDefault();
+            var statType = $('#milb-stat-type').val();
+            var statVal = parseFloat($('#milb-stat-value').val());
+            var bidAmt = parseFloat($('#milb-bid-amount').val());
+
+            // 1. Validation
+            if (isNaN(statVal) || isNaN(bidAmt)) { alert('Please enter valid numbers.'); return; }
+            
+            if (statType === 'IP' && statVal > 30) {
+                alert('Ineligible: Pitchers must have 30 IP or less.'); return;
+            }
+            if (statType === 'AB' && statVal > 150) {
+                alert('Ineligible: Hitters must have 150 ABs or less.'); return;
+            }
+
+            if (bidAmt > currentMilbBalance) {
+                alert('Insufficient MiLB Funds. You only have $' + currentMilbBalance.toLocaleString()); return;
+            }
+
+            // 2. Submission
+            var btn = $('#milb-submit-btn');
+            var originalText = btn.text();
+            btn.text('Processing...').prop('disabled', true);
+
+            $.ajax({
+                url: faModalData.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'sign_milb_free_agent',
+                    nonce: faModalData.sign_fa_nonce_milb,
+                    player_id: $('#milb-player-id').val(),
+                    league_id: $('#milb-league-id').val(),
+                    team_id: $('#milb-team-id').val(),
+                    stat_type: statType,
+                    stat_value: statVal,
+                    bid_amount: bidAmt
+                },
+                success: function(response) {
+                    if (response.success) {
+                        alert(response.data);
+                        location.reload();
+                    } else {
+                        alert('Error: ' + (response.data || 'Unknown error'));
+                        btn.text(originalText).prop('disabled', false);
+                    }
+                },
+                error: function() {
+                    alert('Server error.');
+                    btn.text(originalText).prop('disabled', false);
+                }
+            });
+        });
+
+        milbModal.find('.fa-modal-close, .fa-modal-cancel').on('click', function() { milbModal.addClass('fa-modal-hidden'); });
+    }
 });

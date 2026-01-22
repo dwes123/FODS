@@ -596,16 +596,38 @@ function handle_sign_free_agent_action() {
     if (!empty($managed_teams_check) && is_array($managed_teams_check)) { foreach ($managed_teams_check as $t) { if (is_array($t) && ($t['league_id'] ?? '') === $league_id && ($t['fantasy_team_id'] ?? '') === $team_id) { $is_manager_of_team = true; break; } } }
     if (!$is_manager_of_team) { wp_redirect(add_query_arg('sign_error', 'not_manager', $redirect_base)); exit; }
 
+    // --- 40-Man Roster Check ---
+    $roster_count_args = [
+        'post_type' => 'playerdata',
+        'fields' => 'ids',
+        'posts_per_page' => -1,
+        'meta_query' => [
+            'relation' => 'AND',
+            ['key' => 'league_id', 'value' => $league_id],
+            ['key' => 'fantasy_team_id', 'value' => $team_id],
+            ['key' => 'status_40_man', 'value' => 'X']
+        ]
+    ];
+    $roster_query = new WP_Query($roster_count_args);
+    if ( $roster_query->post_count >= 40 ) {
+        wp_redirect(add_query_arg('sign_error', 'roster_full', $redirect_base)); exit;
+    }
+    // ---------------------------
+
     $bid_points = fod_calculate_bid_points($bid_years, $bid_aav);
     if ($bid_points <= 0) { wp_redirect(add_query_arg('sign_error', 'invalid_bid', $redirect_base)); exit; }
 
     $current_fa_status = get_field('fa_status', $player_id);
     $current_bid_points = (float) get_field('pending_bid_amount', $player_id);
+    $current_bid_type = get_field('bid_type', $player_id);
 
     if ($current_fa_status === 'available' || empty($current_fa_status) || ($current_fa_status === 'rostered' && empty(get_field('fantasy_team_id', $player_id)))) {
         // This is the first bid
     } elseif ($current_fa_status === 'pending_bid') {
-        if ($bid_points < $current_bid_points + 1) {
+        // Standard bid supersedes MiLB bid immediately (no price check needed)
+        if ($current_bid_type === 'milb') {
+            // Allow overwrite
+        } elseif ($bid_points < $current_bid_points + 1) {
             wp_redirect(add_query_arg('sign_error', 'bid_too_low', $redirect_base)); exit;
         }
     } else {
@@ -628,6 +650,7 @@ function handle_sign_free_agent_action() {
     $bid_end_time = date('Y-m-d H:i:s', strtotime($now_mysql . ' +' . $hours_to_add . ' hours'));
 
     update_post_meta($player_id, 'fa_status', 'pending_bid');
+    update_post_meta($player_id, 'bid_type', 'standard'); // Set type
     update_post_meta($player_id, 'pending_bid_team_id', $team_id);
     update_post_meta($player_id, 'pending_bid_manager_id', $current_user_id);
     update_post_meta($player_id, 'pending_bid_amount', $bid_points); // Store points now
@@ -654,17 +677,87 @@ function handle_sign_free_agent_action() {
 add_action('admin_post_sign_free_agent', 'handle_sign_free_agent_action');
 add_action('wp_ajax_sign_free_agent', 'handle_sign_free_agent_action');
 
-function ajax_get_fa_sign_nonce_handler() {
-    check_ajax_referer('get_fa_sign_nonce', 'nonce');
-    if (!is_user_logged_in()) { wp_send_json_error('Not logged in.'); wp_die(); }
+/**
+ * AJAX: Handle Minor League Contract Offer
+ */
+function handle_sign_milb_free_agent_action() {
+    check_ajax_referer('sign_fa_nonce_milb', 'nonce'); // Generic nonce or specific
+    if ( ! is_user_logged_in() ) { wp_send_json_error('Not logged in.'); }
+
     $player_id = isset($_POST['player_id']) ? absint($_POST['player_id']) : 0;
-    if (!$player_id) { wp_send_json_error('Player ID missing for nonce generation.'); wp_die(); }
-    $nonce_action = 'sign_fa_nonce_' . $player_id;
-    $nonce = wp_create_nonce($nonce_action);
-    wp_send_json_success(array('nonce' => $nonce));
-    wp_die();
+    $league_id = isset($_POST['league_id']) ? sanitize_text_field($_POST['league_id']) : '';
+    $team_id   = isset($_POST['team_id'])   ? sanitize_text_field($_POST['team_id'])   : '';
+    $stat_type = isset($_POST['stat_type']) ? sanitize_text_field($_POST['stat_type']) : '';
+    $stat_val  = isset($_POST['stat_value']) ? floatval($_POST['stat_value']) : 0;
+    $bid_amt   = isset($_POST['bid_amount']) ? floatval($_POST['bid_amount']) : 0;
+
+    if ( !$player_id || !$team_id || !$bid_amt ) { wp_send_json_error('Missing required fields.'); }
+
+    // 1. Verify Stats Eligibility
+    if ( $stat_type === 'IP' ) {
+        if ( $stat_val > 30 ) wp_send_json_error('Player ineligible: IP must be <= 30.');
+    } elseif ( $stat_type === 'AB' ) {
+        if ( $stat_val > 150 ) wp_send_json_error('Player ineligible: AB must be <= 150.');
+    } else {
+        wp_send_json_error('Invalid stat type.');
+    }
+
+    // 2. Verify Balance
+    $milb_bal = fod_get_team_milb_balance($league_id, $team_id);
+    if ( $bid_amt > $milb_bal ) {
+        wp_send_json_error('Insufficient MiLB Balance. You have $' . number_format($milb_bal));
+    }
+
+    // 3. Process Bid
+    $current_fa_status = get_field('fa_status', $player_id);
+    if ($current_fa_status === 'pending_bid') {
+        wp_send_json_error('Player already has a pending bid. You cannot offer a MiLB contract while a standard auction is active.');
+    } elseif ($current_fa_status === 'rostered' && !empty(get_field('fantasy_team_id', $player_id))) {
+        wp_send_json_error('Player is already rostered.');
+    }
+
+    // Start Clock
+    $now_mysql = current_time('mysql', true);
+    $current_year = date('Y');
+    $opening_day = fod_get_opening_day($league_id, $current_year);
+    $today_ymd = date('Ymd');
+    $end_of_season = $current_year . '1001';
+    
+    $hours_to_add = 48; 
+    if ( $opening_day && $today_ymd >= $opening_day && $today_ymd <= $end_of_season ) {
+        $hours_to_add = 24;
+    }
+    $bid_end_time = date('Y-m-d H:i:s', strtotime($now_mysql . ' +' . $hours_to_add . ' hours'));
+
+    update_post_meta($player_id, 'fa_status', 'pending_bid');
+    update_post_meta($player_id, 'bid_type', 'milb'); // Set Type
+    update_post_meta($player_id, 'pending_bid_team_id', $team_id);
+    update_post_meta($player_id, 'pending_bid_manager_id', get_current_user_id());
+    update_post_meta($player_id, 'pending_bid_amount', $bid_amt);
+    update_post_meta($player_id, 'milb_qualifying_stat', "$stat_val $stat_type");
+    update_post_meta($player_id, 'bid_start_time', $now_mysql);
+    update_post_meta($player_id, 'bid_end_time', $bid_end_time);
+
+    // Deduct Balance Immediately (Hold funds) - Or deduct on finalize?
+    // Usually deduct on finalize. For now, we just validate.
+
+    wp_send_json_success('MiLB Offer Submitted! Pending for ' . $hours_to_add . ' hours.');
 }
-add_action('wp_ajax_get_fa_sign_nonce', 'ajax_get_fa_sign_nonce_handler');
+add_action('wp_ajax_sign_milb_free_agent', 'handle_sign_milb_free_agent_action');
+
+/**
+ * AJAX: Get Team Financials
+ */
+function get_team_financials_ajax_handler() {
+    if ( !is_user_logged_in() ) wp_send_json_error();
+    $league = $_POST['league_id'] ?? '';
+    $team = $_POST['team_id'] ?? '';
+    wp_send_json_success([
+        'isbp' => fod_get_team_isbp_balance($league, $team),
+        'milb' => fod_get_team_milb_balance($league, $team)
+    ]);
+}
+add_action('wp_ajax_get_team_financials', 'get_team_financials_ajax_handler');
 
 function dfa_player_ajax_handler() {
     check_ajax_referer('dfa_player_nonce', 'nonce');

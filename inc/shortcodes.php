@@ -1070,6 +1070,7 @@ function display_fa_sign_notices() {
             case 'not_logged_in':       $error_message = 'You must be logged in.'; break;
             case 'already_pending_bid': $error_message = 'Player already has a pending bid.'; break;
             case 'bid_too_low':         $error_message = 'Your bid must be at least 1 point higher than the current bid.'; break;
+            case 'roster_full':         $error_message = 'Your 40-man roster is full (40/40). You must drop a player before signing a Major League Free Agent.'; break;
         }
         $notice = '<div class="notice notice-error is-dismissible">Error: '.esc_html($error_message).'</div>';
     }
@@ -1180,7 +1181,8 @@ function display_free_agent_list_shortcode($atts) {
             echo '<td>' . esc_html($time_display) . '</td>';
             echo '<td class="fa-action-cell">';
             if ($manager_team_id_for_league) {
-                echo '<button type="button" class="button fa-offer-button" data-playerid="' . esc_attr($player_id) . '" data-playername="' . esc_attr($player_name) . '" data-leagueid="' . esc_attr($selected_league_id) . '" data-teamid="' . esc_attr($manager_team_id_for_league) . '">Bid</button>';
+                echo '<button type="button" class="button fa-offer-button" data-playerid="' . esc_attr($player_id) . '" data-playername="' . esc_attr($player_name) . '" data-leagueid="' . esc_attr($selected_league_id) . '" data-teamid="' . esc_attr($manager_team_id_for_league) . '">Offer Major League</button>';
+                echo ' <button type="button" class="button fa-milb-offer-button" data-playerid="' . esc_attr($player_id) . '" data-playername="' . esc_attr($player_name) . '" data-leagueid="' . esc_attr($selected_league_id) . '" data-teamid="' . esc_attr($manager_team_id_for_league) . '" style="background-color:#777; border-color:#666;">Offer Minor League</button>';
             } else { echo 'N/A'; }
             echo '</td></tr>';
         }
@@ -1200,6 +1202,48 @@ function display_free_agent_list_shortcode($atts) {
     wp_reset_postdata();
     
     echo fod_render_fa_bid_modal();
+
+    // --- MiLB Offer Modal ---
+    ?>
+    <div id="fa-milb-modal" class="fantasy-modal fa-modal-hidden">
+        <div class="fa-modal-content">
+            <span class="fa-modal-close"></span>
+            <h3>Offer Minor League Contract</h3>
+            <div id="milb-modal-message"></div>
+            <p><strong>Player:</strong> <span id="milb-player-name"></span></p>
+            <form id="fa-milb-form">
+                <input type="hidden" id="milb-player-id" name="player_id">
+                <input type="hidden" id="milb-league-id" name="league_id">
+                <input type="hidden" id="milb-team-id" name="team_id">
+                
+                <div style="margin-bottom: 15px; border: 1px solid #ddd; padding: 10px; background: #f9f9f9;">
+                    <label><strong>Step 1: Verify Eligibility</strong></label><br>
+                    <small>Player must have <= 30 IP OR <= 150 ABs.</small>
+                    <div style="margin-top: 5px;">
+                        <select id="milb-stat-type" style="width: 100px;">
+                            <option value="IP">IP</option>
+                            <option value="AB">ABs</option>
+                        </select>
+                        <input type="number" id="milb-stat-value" placeholder="Value" style="width: 100px;" min="0" step="0.1">
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label><strong>Step 2: Offer Amount ($)</strong></label><br>
+                    <input type="number" id="milb-bid-amount" name="bid_amount" style="width: 100%;" min="1" required>
+                    <small id="milb-balance-display">Loading Balance...</small>
+                </div>
+
+                <hr>
+                <button type="submit" id="milb-submit-btn" class="button button-primary">Submit Offer</button>
+                <button type="button" class="button button-secondary fa-modal-cancel">Cancel</button>
+            </form>
+        </div>
+    </div>
+    <style>
+        #fa-milb-modal.fa-modal-hidden { display: none !important; }
+    </style>
+    <?php
     
     return ob_get_clean();
 }

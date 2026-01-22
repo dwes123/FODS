@@ -53,11 +53,46 @@ function fa_bid_finalization_handler() {
             $winning_aav = (float) get_post_meta($player_id, 'pending_bid_aav', true);
             $winning_manager_id = get_post_meta($player_id, 'pending_bid_manager_id', true);
             $league_id = get_post_meta($player_id, 'league_id', true);
+            $bid_type = get_post_meta($player_id, 'bid_type', true);
 
-            if ( !empty($winning_team_id) && $winning_bid_points > 0 && $winning_years > 0 && $winning_aav >= 0 ) {
+            // --- Case 1: MiLB Contract ---
+            if ( $bid_type === 'milb' && !empty($winning_team_id) ) {
+                update_post_meta($player_id, 'fantasy_team_id', $winning_team_id);
+                update_post_meta($player_id, 'fa_status', 'rostered');
+                update_post_meta($player_id, 'status_40_man', ''); // Ensure off 40-man
+                
+                // Clear Contracts
+                for ($y = 2026; $y <= 2040; $y++) { delete_post_meta($player_id, 'contract_' . $y); }
+
+                // Deduct MiLB Balance
+                $field_name = 'milb_' . strtolower($league_id);
+                $rows = get_field($field_name, 'option') ?: [];
+                foreach ($rows as $idx => $row) {
+                    if (($row['team_id'] ?? '') === $winning_team_id) {
+                        $rows[$idx]['balance'] = (float)$rows[$idx]['balance'] - $winning_bid_points;
+                        update_field($field_name, $rows, 'option');
+                        break;
+                    }
+                }
+
+                // Log
+                if ( function_exists('log_league_transaction') ) {
+                    log_league_transaction([
+                        'transaction_type' => 'Free Agent Signing (MiLB)',
+                        'player_ids'       => [$player_id],
+                        'primary_team'     => $winning_team_id,
+                        'league_id'        => $league_id,
+                        'summary'          => esc_html($player_name) . ' signed to a Minor League contract by ' . esc_html($winning_team_id) . ' ($' . number_format($winning_bid_points) . ').',
+                    ]);
+                }
+
+            } 
+            // --- Case 2: Standard Major League Contract ---
+            elseif ( !empty($winning_team_id) && $winning_bid_points > 0 && $winning_years > 0 && $winning_aav >= 0 ) {
                 
                 update_post_meta($player_id, 'fantasy_team_id', $winning_team_id);
                 update_post_meta($player_id, 'fa_status', 'rostered');
+                update_post_meta($player_id, 'status_40_man', 'X'); // Force to 40-man
 
                 // Clear old contract data before writing new
                 for ($y = 2026; $y <= 2040; $y++) {
@@ -96,6 +131,7 @@ function fa_bid_finalization_handler() {
             }
 
             // Cleanup all pending fields
+            delete_post_meta($player_id, 'bid_type');
             delete_post_meta($player_id, 'pending_bid_team_id');
             delete_post_meta($player_id, 'pending_bid_manager_id');
             delete_post_meta($player_id, 'pending_bid_amount');

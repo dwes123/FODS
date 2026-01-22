@@ -192,6 +192,7 @@ jQuery(document).ready(function($) {
     }
 
     function updateRetentionUI() {
+        console.log("Updating Retention UI...");
         var container = $('#retention-checkboxes');
         var wrapper = $('#salary-retention-container');
         container.empty();
@@ -201,15 +202,21 @@ jQuery(document).ready(function($) {
 
         // Get Offered Players
         $(playersOfferedSelectId + ' option:selected').each(function() {
-            selectedIds.push($(this).val());
-            selectedNames.push($(this).text());
+            if ($(this).val()) {
+                selectedIds.push($(this).val());
+                selectedNames.push($(this).text());
+            }
         });
 
         // Get Requested Players
         $(playersRequestedSelectId + ' option:selected').each(function() {
-            selectedIds.push($(this).val());
-            selectedNames.push($(this).text());
+            if ($(this).val()) {
+                selectedIds.push($(this).val());
+                selectedNames.push($(this).text());
+            }
         });
+
+        console.log("Selected IDs for retention check:", selectedIds);
 
         if (selectedIds.length === 0) {
             wrapper.hide();
@@ -228,8 +235,6 @@ jQuery(document).ready(function($) {
             html += '</div>';
             container.append(html);
         });
-        
-        // Restore checked state if re-rendering (optional complexity, skipping for now to keep simple)
     }
 
     $(document).on('change', '.retention-check', function() {
@@ -242,6 +247,7 @@ jQuery(document).ready(function($) {
     });
 
     function updateTradePreview() {
+        console.log("Updating Trade Preview...");
         const preview = $('#trade-summary-preview');
         const offeredList = $('#preview-offered-list');
         const requestedList = $('#preview-requested-list');
@@ -264,6 +270,9 @@ jQuery(document).ready(function($) {
         const retainedVal = $('#retained_player_ids').val();
         const retainedIds = (retainedVal || '').split(',').filter(x => x);
         const currentYear = new Date().getFullYear().toString();
+
+        console.log("Retained IDs:", retainedIds);
+        console.log("Current Year:", currentYear);
 
         // Calculate dynamic retention percentage (Date-Based Pro-Rating)
         let proRatePct = 0.0;
