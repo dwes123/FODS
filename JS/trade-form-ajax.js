@@ -59,12 +59,12 @@ jQuery(document).ready(function($) {
             updateDropdown(playersRequestedSelectId, [], '-- Select League & Target Manager First --', '-- Select League & Target Manager First --', targetPlayersCache);
             $(playersRequestedSelectId).prop('disabled', true);
             $(submitButtonId).prop('disabled', true);
-            return;
+            return Promise.resolve();
         }
         toggleLoading(targetManagerLoadingSpanId, true);
         updateDropdown(targetManagerSelectId, [], 'Loading Managers...', 'Loading Managers...');
 
-        $.ajax({
+        return $.ajax({
             url: tradeFormAjax.ajax_url,
             type: 'POST',
             data: {
@@ -98,12 +98,12 @@ jQuery(document).ready(function($) {
             updateDropdown(playersOfferedSelectId, [], '-- Select League First --', '-- Select League First --', myPlayersCache);
             $(playersOfferedSelectId).prop('disabled', true);
             $(submitButtonId).prop('disabled', true);
-            return;
+            return Promise.resolve();
         }
         toggleLoading(playersOfferedLoadingSpanId, true);
         updateDropdown(playersOfferedSelectId, [], 'Loading Your Players...', 'Loading Your Players...', myPlayersCache);
 
-        $.ajax({
+        return $.ajax({
             url: tradeFormAjax.ajax_url,
             type: 'POST',
             data: {
@@ -138,7 +138,7 @@ jQuery(document).ready(function($) {
             updateDropdown(playersRequestedSelectId, [], '-- Select League & Target Manager First --', '-- Select League & Target Manager First --', targetPlayersCache);
             $(playersRequestedSelectId).prop('disabled', true);
             $(submitButtonId).prop('disabled', true);
-            return;
+            return Promise.resolve();
         }
         toggleLoading(playersRequestedLoadingSpanId, true);
         updateDropdown(playersRequestedSelectId, [], 'Loading Target Players...', 'Loading Target Players...', targetPlayersCache);
@@ -149,7 +149,7 @@ jQuery(document).ready(function($) {
             $('#target-isbp-balance-display').text('Available: $' + parseInt(targetMgr.isbp_balance).toLocaleString());
         }
 
-        $.ajax({
+        return $.ajax({
             url: tradeFormAjax.ajax_url,
             type: 'POST',
             data: {
@@ -425,7 +425,54 @@ jQuery(document).ready(function($) {
     $(playersRequestedSelectId).prop('disabled', true);
     $(submitButtonId).prop('disabled', true);
 
-    if ($(leagueSelectId).val()) {
+    // --- Deep Linking & Modal Logic ---
+    function initiateTradeWithPlayer(pid) {
+        $.post(tradeFormAjax.ajax_url, {
+            action: 'get_player_trade_info',
+            nonce: tradeFormAjax.nonce,
+            player_id: pid
+        }, function(res) {
+            if(res.success) {
+                const lid = res.data.league_id;
+                const mid = res.data.manager_id;
+                const pid = res.data.player_id;
+
+                $(leagueSelectId).val(lid);
+                
+                // Chain calls
+                fetchTradeableManagers(lid).then(function() {
+                    $(targetManagerSelectId).val(mid);
+                    return fetchTargetPlayers(lid, mid);
+                }).then(function() {
+                    $(playersRequestedSelectId).val(pid);
+                    updateRetentionUI();
+                    validateFormState();
+                });
+                
+                fetchMyPlayers(lid);
+            }
+        });
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const prePlayerId = urlParams.get('pre_player');
+
+    if (prePlayerId) {
+        initiateTradeWithPlayer(prePlayerId);
+    } else if ($(leagueSelectId).val()) {
         $(leagueSelectId).trigger('change');
     }
+
+    // Modal Trigger from Trade Block
+    $(document).on('click', '.trade-block-propose-btn', function(e) {
+        e.preventDefault();
+        const pid = $(this).data('playerid');
+        $('#trade-proposal-modal').removeClass('fa-modal-hidden');
+        initiateTradeWithPlayer(pid);
+    });
+
+    // Close Modal
+    $(document).on('click', '#trade-proposal-modal .fa-modal-close', function() {
+        $('#trade-proposal-modal').addClass('fa-modal-hidden');
+    });
 });

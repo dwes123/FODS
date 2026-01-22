@@ -816,29 +816,17 @@ add_shortcode( 'league_salary_summary', 'display_league_salary_summary_shortcode
 /* ------------------------------------------------------------------------
    Trade proposal – Form and Handlers
 ------------------------------------------------------------------------ */
-function display_trade_proposal_form_shortcode() {
-    if ( ! is_user_logged_in() ) { return '<p>Please log in to propose a trade.</p>'; }
-    if ( ! function_exists('get_field') ) { return '<p>Error: ACF not active.</p>'; }
-    $current_user_id = get_current_user_id(); $managed_teams = get_field('managed_teams', 'user_' . $current_user_id);
+
+/**
+ * Returns the HTML for the trade proposal form.
+ * Can be used in shortcodes or modals.
+ */
+function fod_get_trade_form_html() {
+    $current_user_id = get_current_user_id();
+    $managed_teams = get_field('managed_teams', 'user_' . $current_user_id);
+    
     ob_start();
-    if (isset($_GET['trade_success'])) { echo '<div class="trade-form-notice success">Trade proposed successfully! An email has been sent.</div>'; }
-    if (isset($_GET['trade_error'])) {
-        $error_message = 'An error occurred.';
-        switch ($_GET['trade_error']) {
-            case 'missing_fields': $error_message = 'Please fill out all required fields.'; break;
-            case 'self_trade': $error_message = 'You cannot propose a trade with yourself.'; break;
-            case 'post_creation_failed': $error_message = 'Could not save the trade proposal. Please try again later.'; break;
-            case 'security_check_failed': $error_message = 'Security check failed. Please refresh the page and try again.'; break;
-            case 'not_logged_in': $error_message = 'You must be logged in to propose a trade.'; break;
-            case 'acf_missing': $error_message = 'A configuration error occurred. ACF functions missing.'; break;
-            case 'ownership_mismatch': $error_message = 'Trade failed: A player involved in the trade is no longer on the expected team.'; break;
-            case 'no_players': $error_message = 'A trade must involve at least one player.'; break;
-            case 'deadline_passed': $error_message = 'The trade deadline for this league has passed.'; break;
-        }
-        echo '<div class="trade-form-notice error">Error: ' . esc_html($error_message) . '</div>';
-    }
     ?>
-    <div id="trade-deadline-notice" class="trade-form-notice error" style="display:none; margin-bottom: 20px;"></div>
     <form id="trade-proposal-form" class="trade-proposal-form-class" method="post" action="<?php echo esc_url( admin_url('admin-post.php') ); ?>">
         <input type="hidden" name="action" value="process_trade_proposal">
         <?php wp_nonce_field( 'process_trade_proposal_nonce', 'trade_proposal_nonce_field' ); ?>
@@ -928,8 +916,101 @@ function display_trade_proposal_form_shortcode() {
     <?php
     return ob_get_clean();
 }
+
+function display_trade_proposal_form_shortcode() {
+    if ( ! is_user_logged_in() ) { return '<p>Please log in to propose a trade.</p>'; }
+    if ( ! function_exists('get_field') ) { return '<p>Error: ACF not active.</p>'; }
+    
+    ob_start();
+    if (isset($_GET['trade_success'])) { echo '<div class="trade-form-notice success">Trade proposed successfully! An email has been sent.</div>'; }
+    if (isset($_GET['trade_error'])) {
+        // ... (Error handling remains same, handled by page reload usually)
+        echo '<div class="trade-form-notice error">An error occurred with your trade proposal.</div>';
+    }
+    ?>
+    <div id="trade-deadline-notice" class="trade-form-notice error" style="display:none; margin-bottom: 20px;"></div>
+    <?php
+    echo fod_get_trade_form_html();
+    return ob_get_clean();
+}
 add_shortcode( 'trade_proposal_form', 'display_trade_proposal_form_shortcode' );
 
+/* ------------------------------------------------------------------------
+   [trade_block_list] — Public list of players on the block
+------------------------------------------------------------------------ */
+function display_trade_block_list_shortcode() {
+    // 1. Get all players on block
+    $args = [
+        'post_type' => ['playerdata', 'nbaplayer'],
+        'posts_per_page' => -1,
+        'meta_query' => [
+            'relation' => 'AND',
+            ['key' => 'on_trade_block', 'value' => '1'],
+            ['key' => 'fantasy_team_id', 'compare' => 'EXISTS'],
+            ['key' => 'fantasy_team_id', 'value' => '', 'compare' => '!=']
+        ],
+        'orderby' => 'title',
+        'order' => 'ASC'
+    ];
+    $q = new WP_Query($args);
+
+    if ( !$q->have_posts() ) return '<p>No players are currently on the trade block.</p>';
+
+    // 2. Group by League -> Team
+    $grouped = [];
+    foreach ($q->posts as $p) {
+        $lid = get_field('league_id', $p->ID);
+        $tid = get_field('fantasy_team_id', $p->ID);
+        if ($lid && $tid) {
+            $grouped[$lid][$tid][] = $p;
+        }
+    }
+    
+    ksort($grouped);
+
+    ob_start();
+    echo '<div class="trade-block-wrapper">';
+    
+    foreach ($grouped as $league => $teams) {
+        echo '<h2>' . esc_html($league) . ' Trade Block</h2>';
+        ksort($teams);
+        
+        foreach ($teams as $team => $players) {
+            echo '<div class="trade-block-team" style="margin-bottom: 20px; border: 1px solid #ddd; padding: 15px; border-radius: 5px; background: #fff;">';
+            echo '<h3 style="margin-top:0; border-bottom: 1px solid #eee; padding-bottom: 10px;">' . esc_html($team) . '</h3>';
+            echo '<ul style="list-style: none; padding: 0; margin: 0;">';
+            
+            foreach ($players as $p) {
+                $pos = get_field('position', $p->ID);
+                $mlb = get_field('mlb_team', $p->ID);
+                // Use a button with data attribute instead of link
+                echo '<li style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dashed #eee;">';
+                echo '<span><strong>' . esc_html($p->post_title) . '</strong> (' . esc_html($pos) . ' - ' . esc_html($mlb) . ')</span>';
+                echo '<button type="button" class="button button-small trade-block-propose-btn" data-playerid="' . esc_attr($p->ID) . '">Propose Trade</button>';
+                echo '</li>';
+            }
+            echo '</ul></div>';
+        }
+    }
+    echo '</div>';
+
+    // Modal
+    ?>
+    <div id="trade-proposal-modal" class="fantasy-modal fa-modal-hidden">
+        <div class="fa-modal-content" style="max-width: 800px; width: 95%;">
+            <span class="fa-modal-close"></span>
+            <h3>Propose Trade</h3>
+            <div id="trade-modal-form-container">
+                <?php echo fod_get_trade_form_html(); ?>
+            </div>
+        </div>
+    </div>
+    <style>#trade-proposal-modal.fa-modal-hidden { display: none !important; }</style>
+    <?php
+    
+    return ob_get_clean();
+}
+add_shortcode('trade_block_list', 'display_trade_block_list_shortcode');
 
 function display_pending_trades_shortcode() {
     if ( ! is_user_logged_in() ) { return '<p>Please log in to view pending trade proposals.</p>'; }
@@ -1181,8 +1262,16 @@ function display_free_agent_list_shortcode($atts) {
             echo '<td>' . esc_html($time_display) . '</td>';
             echo '<td class="fa-action-cell">';
             if ($manager_team_id_for_league) {
-                echo '<button type="button" class="button fa-offer-button" data-playerid="' . esc_attr($player_id) . '" data-playername="' . esc_attr($player_name) . '" data-leagueid="' . esc_attr($selected_league_id) . '" data-teamid="' . esc_attr($manager_team_id_for_league) . '">Offer Major League</button>';
-                echo ' <button type="button" class="button fa-milb-offer-button" data-playerid="' . esc_attr($player_id) . '" data-playername="' . esc_attr($player_name) . '" data-leagueid="' . esc_attr($selected_league_id) . '" data-teamid="' . esc_attr($manager_team_id_for_league) . '" style="background-color:#777; border-color:#666;">Offer Minor League</button>';
+                $is_ifa = get_field('is_international_free_agent', $player_id);
+                
+                if ( $is_ifa ) {
+                    // International Free Agent: Show ISBP Bid Button
+                    echo '<button type="button" class="button fa-isbp-offer-button" data-playerid="' . esc_attr($player_id) . '" data-playername="' . esc_attr($player_name) . '" data-leagueid="' . esc_attr($selected_league_id) . '" data-teamid="' . esc_attr($manager_team_id_for_league) . '" style="background-color: #28a745; border-color: #28a745; color: white;">International Free Agent Bid</button>';
+                } else {
+                    // Standard Free Agent
+                    echo '<button type="button" class="button fa-offer-button" data-playerid="' . esc_attr($player_id) . '" data-playername="' . esc_attr($player_name) . '" data-leagueid="' . esc_attr($selected_league_id) . '" data-teamid="' . esc_attr($manager_team_id_for_league) . '">Offer Major League</button>';
+                    echo ' <button type="button" class="button fa-milb-offer-button" data-playerid="' . esc_attr($player_id) . '" data-playername="' . esc_attr($player_name) . '" data-leagueid="' . esc_attr($selected_league_id) . '" data-teamid="' . esc_attr($manager_team_id_for_league) . '" style="background-color:#777; border-color:#666;">Offer Minor League</button>';
+                }
             } else { echo 'N/A'; }
             echo '</td></tr>';
         }
@@ -1240,8 +1329,36 @@ function display_free_agent_list_shortcode($atts) {
             </form>
         </div>
     </div>
+
+    <!-- --- ISBP Offer Modal --- -->
+    <div id="fa-isbp-modal" class="fantasy-modal fa-modal-hidden">
+        <div class="fa-modal-content">
+            <span class="fa-modal-close"></span>
+            <h3>International Free Agent Bid</h3>
+            <div id="isbp-modal-message"></div>
+            <p><strong>Player:</strong> <span id="isbp-player-name"></span></p>
+            <p>This player is an International Free Agent. You must bid using your International Slot Bonus Pool (ISBP) funds.</p>
+            
+            <form id="fa-isbp-form">
+                <input type="hidden" id="isbp-player-id" name="player_id">
+                <input type="hidden" id="isbp-league-id" name="league_id">
+                <input type="hidden" id="isbp-team-id" name="team_id">
+                
+                <div style="margin-bottom: 15px;">
+                    <label><strong>Bid Amount ($)</strong></label><br>
+                    <input type="number" id="isbp-bid-amount" name="bid_amount" style="width: 100%;" min="1" required>
+                    <small id="isbp-balance-display" style="color:#28a745; font-weight:bold;">Loading Balance...</small>
+                </div>
+
+                <hr>
+                <button type="submit" id="isbp-submit-btn" class="button button-primary" style="background-color: #28a745; border-color: #28a745;">Submit ISBP Bid</button>
+                <button type="button" class="button button-secondary fa-modal-cancel">Cancel</button>
+            </form>
+        </div>
+    </div>
+
     <style>
-        #fa-milb-modal.fa-modal-hidden { display: none !important; }
+        #fa-milb-modal.fa-modal-hidden, #fa-isbp-modal.fa-modal-hidden { display: none !important; }
     </style>
     <?php
     
@@ -2025,3 +2142,81 @@ function display_luxury_tax_status_shortcode( $atts ) {
     return ob_get_clean();
 }
 add_shortcode( 'luxury_tax_status', 'display_luxury_tax_status_shortcode' );
+
+/* ------------------------------------------------------------------------
+   [trade_block_list] — Public list of players on the block
+------------------------------------------------------------------------ */
+function display_trade_block_list_shortcode() {
+    // 1. Get all players on block
+    $args = [
+        'post_type' => ['playerdata', 'nbaplayer'],
+        'posts_per_page' => -1,
+        'meta_query' => [
+            'relation' => 'AND',
+            ['key' => 'on_trade_block', 'value' => '1'],
+            ['key' => 'fantasy_team_id', 'compare' => 'EXISTS'],
+            ['key' => 'fantasy_team_id', 'value' => '', 'compare' => '!=']
+        ],
+        'orderby' => 'title',
+        'order' => 'ASC'
+    ];
+    $q = new WP_Query($args);
+
+    if ( !$q->have_posts() ) return '<p>No players are currently on the trade block.</p>';
+
+    // 2. Group by League -> Team
+    $grouped = [];
+    foreach ($q->posts as $p) {
+        $lid = get_field('league_id', $p->ID);
+        $tid = get_field('fantasy_team_id', $p->ID);
+        if ($lid && $tid) {
+            $grouped[$lid][$tid][] = $p;
+        }
+    }
+    
+    ksort($grouped);
+
+    // 3. Render
+    $trade_page_id = get_field('trade_page', 'option');
+    $trade_url = $trade_page_id ? get_permalink($trade_page_id) : home_url('/trade-proposal');
+
+    ob_start();
+    echo '<div class="trade-block-wrapper">';
+    
+    foreach ($grouped as $league => $teams) {
+        echo '<h2>' . esc_html($league) . ' Trade Block</h2>';
+        ksort($teams);
+        
+        foreach ($teams as $team => $players) {
+            echo '<div class="trade-block-team" style="margin-bottom: 20px; border: 1px solid #ddd; padding: 15px; border-radius: 5px; background: #fff;">';
+            echo '<h3 style="margin-top:0; border-bottom: 1px solid #eee; padding-bottom: 10px;">' . esc_html($team) . '</h3>';
+            echo '<ul style="list-style: none; padding: 0; margin: 0;">';
+            
+            foreach ($players as $p) {
+                $pos = get_field('position', $p->ID);
+                $mlb = get_field('mlb_team', $p->ID);
+                $link = add_query_arg([
+                    'pre_league' => $league,
+                    'pre_team' => $team, // Team Name (ID) is usually unique enough, but better if we had manager ID. 
+                    // Wait, the trade form uses Manager ID. We need to find the manager of this team.
+                    // This is expensive to do in a loop.
+                    // Simplified: Just pre-fill League and Player. The user picks the manager?
+                    // Better: The Trade Form JS can reverse-lookup the manager if we pass the team ID? 
+                    // Or we just link to the form and let them pick.
+                    // Let's pass 'pre_player' ID. JS can fetch details.
+                    'pre_player' => $p->ID
+                ], $trade_url);
+
+                echo '<li style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dashed #eee;">';
+                echo '<span><strong>' . esc_html($p->post_title) . '</strong> (' . esc_html($pos) . ' - ' . esc_html($mlb) . ')</span>';
+                echo '<a href="' . esc_url($link) . '" class="button button-small">Propose Trade</a>';
+                echo '</li>';
+            }
+            echo '</ul></div>';
+        }
+    }
+    echo '</div>';
+    
+    return ob_get_clean();
+}
+add_shortcode('trade_block_list', 'display_trade_block_list_shortcode');

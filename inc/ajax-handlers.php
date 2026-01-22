@@ -495,7 +495,7 @@ function handle_accept_trade() {
 
     // --- Transfer ISBP Funds (Central Options Table) ---
     $transfer_isbp = function($league, $from_team, $to_team, $amount) {
-        if ($amount <= 0 || !$from_team || !$to_team) return;
+        if ($amount <= 0 || !$from_team || !$to_team) return; 
         
         $field_name = 'isbp_' . strtolower($league);
         $rows = get_field($field_name, 'option') ?: [];
@@ -677,6 +677,18 @@ function handle_sign_free_agent_action() {
 add_action('admin_post_sign_free_agent', 'handle_sign_free_agent_action');
 add_action('wp_ajax_sign_free_agent', 'handle_sign_free_agent_action');
 
+function ajax_get_fa_sign_nonce_handler() {
+    check_ajax_referer('get_fa_sign_nonce', 'nonce');
+    if (!is_user_logged_in()) { wp_send_json_error('Not logged in.'); wp_die(); }
+    $player_id = isset($_POST['player_id']) ? absint($_POST['player_id']) : 0;
+    if (!$player_id) { wp_send_json_error('Player ID missing for nonce generation.'); wp_die(); }
+    $nonce_action = 'sign_fa_nonce_' . $player_id;
+    $nonce = wp_create_nonce($nonce_action);
+    wp_send_json_success(array('nonce' => $nonce));
+    wp_die();
+}
+add_action('wp_ajax_get_fa_sign_nonce', 'ajax_get_fa_sign_nonce_handler');
+
 /**
  * AJAX: Handle Minor League Contract Offer
  */
@@ -746,6 +758,80 @@ function handle_sign_milb_free_agent_action() {
 add_action('wp_ajax_sign_milb_free_agent', 'handle_sign_milb_free_agent_action');
 
 /**
+ * AJAX: Handle International Free Agent (ISBP) Bid
+ */
+function handle_sign_isbp_free_agent_action() {
+    check_ajax_referer('sign_fa_nonce_milb', 'nonce'); // Reusing generic/MiLB nonce for simplicity
+    if ( ! is_user_logged_in() ) { wp_send_json_error('Not logged in.'); }
+
+    $player_id = isset($_POST['player_id']) ? absint($_POST['player_id']) : 0;
+    $league_id = isset($_POST['league_id']) ? sanitize_text_field($_POST['league_id']) : '';
+    $team_id   = isset($_POST['team_id'])   ? sanitize_text_field($_POST['team_id'])   : '';
+    $bid_amt   = isset($_POST['bid_amount']) ? floatval($_POST['bid_amount']) : 0;
+
+    if ( !$player_id || !$team_id || !$bid_amt ) { wp_send_json_error('Missing required fields.'); }
+
+    // 1. Verify Player Type
+    if ( ! get_field('is_international_free_agent', $player_id) ) {
+        wp_send_json_error('This player is not an International Free Agent.');
+    }
+
+    // 2. Verify Balance
+    $isbp_bal = fod_get_team_isbp_balance($league_id, $team_id);
+    if ( $bid_amt > $isbp_bal ) {
+        wp_send_json_error('Insufficient ISBP Funds. You have $' . number_format($isbp_bal));
+    }
+
+    // 3. Process Bid (Auction Logic)
+    $current_fa_status = get_field('fa_status', $player_id);
+    $current_bid_amt   = (float) get_field('pending_bid_amount', $player_id);
+    
+    if ($current_fa_status === 'pending_bid') {
+        if ($bid_amt < $current_bid_amt + 1) {
+            wp_send_json_error('Bid too low. Current high bid is $' . number_format($current_bid_amt));
+        }
+    } elseif ($current_fa_status === 'rostered' && !empty(get_field('fantasy_team_id', $player_id))) {
+        wp_send_json_error('Player is already rostered.');
+    }
+
+    // Start Clock
+    $now_mysql = current_time('mysql', true);
+    $current_year = date('Y');
+    $opening_day = fod_get_opening_day($league_id, $current_year);
+    $today_ymd = date('Ymd');
+    $end_of_season = $current_year . '1001';
+    
+    $hours_to_add = 48; 
+    if ( $opening_day && $today_ymd >= $opening_day && $today_ymd <= $end_of_season ) {
+        $hours_to_add = 24;
+    }
+    $bid_end_time = date('Y-m-d H:i:s', strtotime($now_mysql . ' +' . $hours_to_add . ' hours'));
+
+    update_post_meta($player_id, 'fa_status', 'pending_bid');
+    update_post_meta($player_id, 'bid_type', 'isbp'); // Set Type
+    update_post_meta($player_id, 'pending_bid_team_id', $team_id);
+    update_post_meta($player_id, 'pending_bid_manager_id', get_current_user_id());
+    update_post_meta($player_id, 'pending_bid_amount', $bid_amt);
+    update_post_meta($player_id, 'bid_start_time', $now_mysql);
+    update_post_meta($player_id, 'bid_end_time', $bid_end_time);
+
+    // Add to history
+    if ( function_exists('add_row') ) {
+        $new_history_row = array(
+            'history_team_id'    => $team_id,
+            'history_bid_amount' => $bid_amt, // Cash amount
+            'history_bid_years'  => 0,        // N/A for ISBP
+            'history_bid_aav'    => 0,
+            'history_timestamp'  => $now_mysql
+        );
+        add_row('bid_history', $new_history_row, $player_id);
+    }
+
+    wp_send_json_success('ISBP Bid Submitted! Pending for ' . $hours_to_add . ' hours.');
+}
+add_action('wp_ajax_sign_isbp_free_agent', 'handle_sign_isbp_free_agent_action');
+
+/**
  * AJAX: Get Team Financials
  */
 function get_team_financials_ajax_handler() {
@@ -758,6 +844,63 @@ function get_team_financials_ajax_handler() {
     ]);
 }
 add_action('wp_ajax_get_team_financials', 'get_team_financials_ajax_handler');
+
+/**
+ * AJAX: Get Trade Info by Player ID (for Deep Linking)
+ */
+function get_player_trade_info_ajax_handler() {
+    if ( !is_user_logged_in() ) wp_send_json_error();
+    $pid = isset($_POST['player_id']) ? absint($_POST['player_id']) : 0;
+    if (!$pid) wp_send_json_error();
+
+    $league_id = get_field('league_id', $pid);
+    $team_id = get_field('fantasy_team_id', $pid);
+    
+    // Find Manager ID
+    $manager_id = 0;
+    $users = get_users();
+    foreach ($users as $user) {
+        $teams = get_field('managed_teams', 'user_' . $user->ID);
+        if ($teams) {
+            foreach ($teams as $t) {
+                if (($t['league_id']??'') === $league_id && ($t['fantasy_team_id']??'') === $team_id) {
+                    $manager_id = $user->ID;
+                    break 2;
+                }
+            }
+        }
+    }
+
+    wp_send_json_success([
+        'league_id' => $league_id,
+        'manager_id' => $manager_id,
+        'player_id' => $pid
+    ]);
+}
+add_action('wp_ajax_get_player_trade_info', 'get_player_trade_info_ajax_handler');
+
+/**
+ * AJAX: Toggle Trade Block Status
+ */
+function toggle_trade_block_status_handler() {
+    check_ajax_referer('roster_move_nonce', 'nonce'); // Reuse roster nonce
+    if ( ! is_user_logged_in() ) wp_send_json_error('Not logged in.');
+
+    $player_id = isset($_POST['player_id']) ? absint($_POST['player_id']) : 0;
+    $action    = isset($_POST['block_action']) ? sanitize_text_field($_POST['block_action']) : '';
+
+    if ( !$player_id || !$action ) wp_send_json_error('Missing data.');
+    if ( ! is_user_owner_of_player(get_current_user_id(), $player_id) ) wp_send_json_error('Permission denied.');
+
+    if ( $action === 'add' ) {
+        update_field('on_trade_block', true, $player_id);
+        wp_send_json_success('Player added to Trade Block.');
+    } else {
+        update_field('on_trade_block', false, $player_id);
+        wp_send_json_success('Player removed from Trade Block.');
+    }
+}
+add_action('wp_ajax_toggle_trade_block', 'toggle_trade_block_status_handler');
 
 function dfa_player_ajax_handler() {
     check_ajax_referer('dfa_player_nonce', 'nonce');
