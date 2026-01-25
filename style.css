@@ -1,3 +1,66 @@
+/*
+ Theme Name:   Twenty Twenty-Two Child
+ Theme URI:    https://frontofficedynastysports.com
+ Description:  Child theme for the Twenty Twenty-Two theme
+ Author:       Dan
+ Template:     twentytwentytwo
+ Version:      1.0.1
+ Text Domain:  twentytwentytwo-child
+*/
+
+/* Global Reset for Home Page Top Space */
+.home {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+.home .is-root-container {
+    padding-top: 0 !important;
+}
+
+/* Ensure the header container is tight on all pages */
+header.wp-block-template-part {
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+}
+
+/* Specifically target and remove the horizontal separator line (hr) */
+.home hr,
+.home .wp-block-separator {
+    display: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+}
+
+/* Kill the massive gaps in the Twenty Twenty-Two block structure */
+.home .wp-site-blocks {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    gap: 0 !important;
+}
+
+.home .entry-content {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+.home header.wp-block-template-part {
+    padding-top: 0 !important; /* Zero out top padding */
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+.home .site-header {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+.home .wp-block-group {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
 /* --- Front Office Dynasty Sports Custom Colors --- */
 :root {
     --fod-blue-primary: #2E6DA4; /* Based on your logo's shield blue */
@@ -423,6 +486,14 @@ input[type="submit"]:disabled {
    Homepage Dashboard Layout
 ------------------------------------------- */
 
+/* Force the dashboard wrapper to allow wide/full width if the theme container permits */
+.dashboard-grid-wrapper {
+    width: 100%;
+    max-width: 1400px; /* Much wider than standard content */
+    margin-left: auto;
+    margin-right: auto;
+}
+
 .dashboard-grid {
     display: grid;
     grid-template-columns: 1fr; /* One column on mobile */
@@ -447,6 +518,7 @@ input[type="submit"]:disabled {
     border-radius: 6px;
     padding: 20px 25px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    height: 100%; /* Ensure widgets in the same row match height */
 }
 
 .dashboard-widget h3 {
@@ -478,6 +550,26 @@ input[type="submit"]:disabled {
         /* 2/3 main column, 1/3 side column */
         grid-template-columns: 2fr 1fr;
     }
+    
+    /* If you want the top row to be even 50/50 */
+    .dashboard-grid.equal-split {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* Override Twenty Twenty-Two restricted width for our dashboard sections */
+.dashboard-grid-wrapper.alignwide,
+.dashboard-grid-wrapper.alignfull {
+    max-width: 1250px !important; /* Scaled back from 1600px */
+    width: 85vw !important;       /* Scaled back from 95vw */
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+/* Ensure the parent containers don't choke the width */
+.entry-content > .dashboard-grid-wrapper,
+.wp-site-blocks > .dashboard-grid-wrapper {
+    max-width: none !important;
 }
 /* -------------------------------------------
    Fantrax Standings Table Fix (v3 - 50/50)
@@ -633,5 +725,78 @@ h1.wp-block-post-title,
     display: none !important;
 }
 
+/* Remove the top line and whitespace while keeping navigation */
+.home .wp-site-blocks {
+    padding-top: 0 !important;
+    gap: 0 !important; /* Removes the standard gap between blocks */
+}
+
+.home header.wp-block-template-part,
+.home header.wp-block-template-part > div {
+    margin-bottom: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.home .site-header,
+.home #masthead {
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+}
+
+/* Remove any SVG separators or hr lines at the top */
+.home header hr,
+.home header svg {
+    display: none !important;
+}
+
+.home main.wp-block-group,
+.home .entry-content {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
 /* But we DON'T want to hide headers globally, only on the specific dashboard pages.
    Since we're already injecting a style block in the shortcode, I'll refine that instead. */
+
+/* --- Trade Block Styles --- */
+.trade-block-wrapper h2 {
+    margin-top: 20px;
+}
+
+.trade-block-team-section {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 0;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.trade-block-team-section h3 {
+    margin: 0;
+    padding: 15px 20px;
+    font-size: 1.4em;
+    border-bottom: 1px solid #eee;
+}
+
+.trade-block-team-section .fantasy-table-base {
+    margin: 0;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+}
+
+.trade-block-team-section .fantasy-table-base th {
+    background-color: var(--fod-gray-light);
+    color: var(--fod-blue-primary);
+    border-bottom: 2px solid #eee;
+}
+
+.trade-block-wrapper .button-small {
+    font-size: 0.85em;
+    padding: 5px 12px;
+}

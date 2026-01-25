@@ -396,4 +396,177 @@ jQuery(document).ready(function($) {
 
         milbModal.find('.fa-modal-close, .fa-modal-cancel').on('click', function() { milbModal.addClass('fa-modal-hidden'); });
     }
+
+    // --- 9. ISBP Offer Modal ---
+    var isbpModal = $('#fa-isbp-modal');
+    if (isbpModal.length) {
+        var isbpForm = $('#fa-isbp-form');
+        var isbpBalanceDisplay = $('#isbp-balance-display');
+        var currentIsbpBalance = 0;
+
+        $(document).on('click', '.fa-isbp-offer-button', function(e) {
+            e.preventDefault();
+            var btn = $(this);
+            
+            $('#isbp-player-id').val(btn.data('playerid'));
+            $('#isbp-league-id').val(btn.data('leagueid'));
+            $('#isbp-team-id').val(btn.data('teamid'));
+            $('#isbp-player-name').text(btn.data('playername'));
+            $('#isbp-bid-amount').val('');
+            $('#isbp-modal-message').html('');
+            isbpBalanceDisplay.text('Loading...');
+            
+            isbpModal.removeClass('fa-modal-hidden');
+
+            // Fetch Balance
+            $.ajax({
+                url: faModalData.ajax_url,
+                type: 'POST',
+                data: { 
+                    action: 'get_team_financials', 
+                    league_id: btn.data('leagueid'), 
+                    team_id: btn.data('teamid') 
+                },
+                success: function(res) {
+                    if (res.success) {
+                        currentIsbpBalance = parseInt(res.data.isbp);
+                        isbpBalanceDisplay.text('Available: $' + currentIsbpBalance.toLocaleString());
+                        $('#isbp-bid-amount').attr('max', currentIsbpBalance);
+                    } else {
+                        isbpBalanceDisplay.text('Error loading balance.');
+                    }
+                }
+            });
+        });
+
+        isbpForm.on('submit', function(e) {
+            e.preventDefault();
+            var bidAmt = parseFloat($('#isbp-bid-amount').val());
+
+            if (isNaN(bidAmt) || bidAmt <= 0) { alert('Please enter a valid bid amount.'); return; }
+            
+            if (bidAmt > currentIsbpBalance) {
+                alert('Insufficient ISBP Funds. You only have $' + currentIsbpBalance.toLocaleString()); return;
+            }
+
+            var btn = $('#isbp-submit-btn');
+            var originalText = btn.text();
+            btn.text('Processing...').prop('disabled', true);
+
+            $.ajax({
+                url: faModalData.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'sign_isbp_free_agent',
+                    nonce: faModalData.sign_fa_nonce_milb, // Reusing generic nonce
+                    player_id: $('#isbp-player-id').val(),
+                    league_id: $('#isbp-league-id').val(),
+                    team_id: $('#isbp-team-id').val(),
+                    bid_amount: bidAmt
+                },
+                success: function(response) {
+                    if (response.success) {
+                        alert(response.data);
+                        location.reload();
+                    } else {
+                        alert('Error: ' + (response.data || 'Unknown error'));
+                        btn.text(originalText).prop('disabled', false);
+                    }
+                },
+                error: function() {
+                    alert('Server error.');
+                    btn.text(originalText).prop('disabled', false);
+                }
+            });
+        });
+
+        isbpModal.find('.fa-modal-close, .fa-modal-cancel').on('click', function() { isbpModal.addClass('fa-modal-hidden'); });
+    }
+
+    // --- 10. Trade Block Modal ---
+    var tbModal = $('#trade-block-modal');
+    if (tbModal.length) {
+        $(document).on('click', '.open-trade-block-modal', function(e) {
+            e.preventDefault();
+            var btn = $(this);
+            $('#tb-modal-playerid').val(btn.data('playerid'));
+            $('#tb-player-name-display').text(btn.data('playername'));
+            $('#tb-on-block').prop('checked', btn.data('onblock') == 1);
+            $('#tb-notes').val(btn.data('notes'));
+            $('#trade-block-modal-message').html('');
+            tbModal.removeClass('fa-modal-hidden');
+        });
+
+        $('#trade-block-form').on('submit', function(e) {
+            e.preventDefault();
+            var btn = $('#tb-submit-btn');
+            var originalText = btn.text();
+            btn.text('Saving...').prop('disabled', true);
+
+            $.ajax({
+                url: faModalData.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'update_trade_block',
+                    nonce: faModalData.roster_move_nonce,
+                    player_id: $('#tb-modal-playerid').val(),
+                    on_block: $('#tb-on-block').is(':checked') ? 1 : 0,
+                    notes: $('#tb-notes').val()
+                },
+                success: function(response) {
+                    if (response.success) {
+                        alert(response.data.message);
+                        location.reload();
+                    } else {
+                        alert('Error: ' + response.data);
+                        btn.text(originalText).prop('disabled', false);
+                    }
+                },
+                error: function() {
+                    alert('Server error.');
+                    btn.text(originalText).prop('disabled', false);
+                }
+            });
+        });
+
+        tbModal.find('.fa-modal-close, .fa-modal-cancel').on('click', function() {
+            tbModal.addClass('fa-modal-hidden');
+        });
+    }
+
+    // --- 11. Quick Remove from Trade Block ---
+    $(document).on('click', '.quick-remove-trade-block', function(e) {
+        e.preventDefault();
+        var btn = $(this);
+        var pid = btn.data('playerid');
+
+        if (!confirm('Remove this player from the Trade Block?')) return;
+
+        var originalText = btn.text();
+        btn.text('Removing...').prop('disabled', true);
+
+        $.ajax({
+            url: faModalData.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'update_trade_block',
+                nonce: faModalData.roster_move_nonce,
+                player_id: pid,
+                on_block: 0,
+                notes: ''
+            },
+            success: function(response) {
+                if (response.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + response.data);
+                    btn.text(originalText).prop('disabled', false);
+                }
+            },
+            error: function() {
+                alert('Server error.');
+                btn.text(originalText).prop('disabled', false);
+            }
+        });
+    });
 });

@@ -534,6 +534,15 @@ if( function_exists('acf_add_local_field_group') ) {
                 'type' => 'text', // e.g. "25 IP"
                 'instructions' => 'Stats entered to qualify for MiLB deal.',
             ),
+            // NEW: International Free Agent Flag
+            array(
+                'key' => 'field_is_international_free_agent',
+                'label' => 'Is International Free Agent?',
+                'name' => 'is_international_free_agent',
+                'type' => 'true_false',
+                'instructions' => 'If checked, this player must be signed using ISBP funds.',
+                'ui' => 1,
+            ),
         ),
         'location' => array(
             array(

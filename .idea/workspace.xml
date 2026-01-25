@@ -5,17 +5,75 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ba70289f-d978-48dc-b31c-be0d544f9685" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/Front Office Dynasty Sports.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/Front Office Dynasty Sports.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/markdown.xml" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/import_free_agents.py" beforeDir="false" afterPath="$PROJECT_DIR$/Python/import_free_agents.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions.php" beforeDir="false" afterPath="$PROJECT_DIR$/functions.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/JS/fa-modal.js" beforeDir="false" afterPath="$PROJECT_DIR$/JS/fa-modal.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/JS/trade-form-ajax.js" beforeDir="false" afterPath="$PROJECT_DIR$/JS/trade-form-ajax.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - ALB.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - BUF.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - CHA.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - COL.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - DUR.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - EP.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - GWI.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - IND.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - IOWA.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - JAC.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - LEH.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - LOU.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - LV.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - MEM.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - NOR.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - NSH.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - OKC.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - OMA.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - RENO.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - ROC.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - RR.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - SAC.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - SLC.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - SUG.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - SWB.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - SYR.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - TAC.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - TOL.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - WOR.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - ALB.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - BUF.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - CHA.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - COL.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - DUR.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - EP.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - GWI.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - IND.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - IOWA.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - JAC.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - LEH.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - LOU.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - LV.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - MEM.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - NOR.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - NSH.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - OKC.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - OMA.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - RENO.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - ROC.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - RR.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - SAC.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - SLC.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - SUG.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - SWB.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - SYR.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - TAC.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - TOL.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - WOR.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/acf-json/group_6814f3d464e22.json" beforeDir="false" afterPath="$PROJECT_DIR$/acf-json/group_6814f3d464e22.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/inc/acf.php" beforeDir="false" afterPath="$PROJECT_DIR$/inc/acf.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/inc/ajax-handlers.php" beforeDir="false" afterPath="$PROJECT_DIR$/inc/ajax-handlers.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/inc/api-endpoints.php" beforeDir="false" afterPath="$PROJECT_DIR$/inc/api-endpoints.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/inc/cron.php" beforeDir="false" afterPath="$PROJECT_DIR$/inc/cron.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/inc/enqueue.php" beforeDir="false" afterPath="$PROJECT_DIR$/inc/enqueue.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/inc/roster-helpers.php" beforeDir="false" afterPath="$PROJECT_DIR$/inc/roster-helpers.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/inc/shortcodes.php" beforeDir="false" afterPath="$PROJECT_DIR$/inc/shortcodes.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/style.css" beforeDir="false" afterPath="$PROJECT_DIR$/style.css" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -45,6 +103,7 @@
     &quot;accountId&quot;: &quot;1022edc3-2648-4900-bb47-6d9c12ab63e9&quot;
   }
 }</component>
+  <component name="PhpDebugGeneral" listening_started="true" />
   <component name="PhpWorkspaceProjectConfiguration">
     <include_path>
       <path value="$PROJECT_DIR$/../wordpress/wp-includes" />
@@ -69,7 +128,7 @@
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
     &quot;dart.analysis.tool.window.visible&quot;: &quot;false&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;feature/api-endpoints&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;feature/contract-management-tools&quot;,
     &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
     &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
     &quot;last_opened_file_path&quot;: &quot;C:/Users/Dan/Desktop/Front Office Dynasty Sports&quot;,
@@ -140,8 +199,8 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-jdk-30f59d01ecdd-26cb7f24e5b0-intellij.indexing.shared.core-IU-253.29346.240" />
-        <option value="bundled-js-predefined-d6986cc7102b-9b0f141eb926-JavaScript-IU-253.29346.240" />
+        <option value="bundled-jdk-30f59d01ecdd-2fc7cc6b9a17-intellij.indexing.shared.core-IU-253.30387.90" />
+        <option value="bundled-js-predefined-d6986cc7102b-9b0f141eb926-JavaScript-IU-253.30387.90" />
       </set>
     </attachedChunks>
   </component>
@@ -168,7 +227,9 @@
       <workItem from="1768368765624" duration="608000" />
       <workItem from="1768443248777" duration="53000" />
       <workItem from="1768443350598" duration="3425000" />
-      <workItem from="1768525494312" duration="8742000" />
+      <workItem from="1768525494312" duration="67922000" />
+      <workItem from="1769143591064" duration="197000" />
+      <workItem from="1769143805562" duration="20051000" />
     </task>
     <servers />
   </component>

@@ -179,6 +179,14 @@ function fod_render_player_roster_row( $player_id, $config, & $salary_totals ) {
                 $tr .= '<button type="button" class="button extend-player-button" ' . $common_data_attrs . ' data-position="' . esc_attr($position) . '" style="background-color: #0073aa; color: white; border-color: #006799;">Extend</button>';
             }
 
+            // --- TRADE BLOCK TOGGLE ---
+            $on_block = get_post_meta($player_id, 'on_trade_block', true);
+            $block_notes = get_post_meta($player_id, 'trade_block_notes', true) ?: '';
+            $block_btn_text = ($on_block === '1') ? 'Edit Trade Block' : 'Put on Trade Block';
+            $block_btn_style = ($on_block === '1') ? 'background-color: #e87426; color: white; border-color: #cf611a;' : '';
+            
+            $tr .= '<button type="button" class="button open-trade-block-modal" ' . $common_data_attrs . ' data-onblock="' . ($on_block === '1' ? 1 : 0) . '" data-notes="' . esc_attr($block_notes) . '" style="' . $block_btn_style . '">' . $block_btn_text . '</button>';
+
             $tr .= '<button type="button" class="button dfa-player-button" ' . $common_data_attrs . '>DFA</button>';
         }
         $tr .= '</td>';
@@ -432,6 +440,69 @@ function fod_can_trade( $league_id ) {
     $now_ymd = date('Ymd', current_time('timestamp'));
     
     return ( $now_ymd <= $deadline );
+}
+
+/**
+ * Finds the WordPress User ID assigned to a specific fantasy team.
+ * Uses a cached lookup to keep the Trade Block and other loops fast.
+ *
+ * @param string $league_id
+ * @param string $team_id
+ * @return int User ID or 0 if not found.
+ */
+function fod_get_team_manager_id( $league_id, $team_id ) {
+    static $mgr_lookup_cache = [];
+    $cache_key = strtoupper($league_id . '_' . $team_id);
+
+    if ( isset($mgr_lookup_cache[$cache_key]) ) {
+        return $mgr_lookup_cache[$cache_key];
+    }
+
+    global $wpdb;
+
+    // Method 1: Search individual ACF repeater sub-keys (Most reliable for ACF)
+    // This looks for "managed_teams_0_fantasy_team_id", "managed_teams_1_fantasy_team_id", etc.
+    $sql = $wpdb->prepare(
+        "SELECT user_id FROM {$wpdb->usermeta} 
+         WHERE meta_key LIKE 'managed_teams_%_fantasy_team_id' 
+         AND meta_value = %s 
+         LIMIT 10", 
+        $team_id
+    );
+    
+    $candidate_user_ids = $wpdb->get_col($sql);
+
+    if ( !empty($candidate_user_ids) ) {
+        foreach ( $candidate_user_ids as $uid ) {
+            $managed = get_field('managed_teams', 'user_' . $uid);
+            if ( is_array($managed) ) {
+                foreach ( $managed as $row ) {
+                    if ( strtoupper($row['league_id'] ?? '') === strtoupper($league_id) && strtoupper($row['fantasy_team_id'] ?? '') === strtoupper($team_id) ) {
+                        $mgr_lookup_cache[$cache_key] = (int) $uid;
+                        return (int) $uid;
+                    }
+                }
+            }
+        }
+    }
+
+    // Method 2: Search serialized string (Backup)
+    $search_string = '%"fantasy_team_id";s:' . strlen($team_id) . ':"' . $team_id . '"%';
+    $user_id = $wpdb->get_var($wpdb->prepare(
+        "SELECT user_id FROM {$wpdb->usermeta} 
+         WHERE meta_key = 'managed_teams' 
+         AND meta_value LIKE %s 
+         LIMIT 1",
+        $search_string
+    ));
+
+    if ( $user_id ) {
+        $mgr_lookup_cache[$cache_key] = (int) $user_id;
+        return (int) $user_id;
+    }
+
+    $mgr_lookup_cache[$cache_key] = 0;
+    return 0;
 }
 
 /**

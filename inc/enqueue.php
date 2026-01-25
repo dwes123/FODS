@@ -26,7 +26,7 @@ function twentytwentytwo_child_enqueue_styles() {
     $load_trade_js = ( $trade_page_id && is_page( $trade_page_id ) );
     if ( ! $load_trade_js && function_exists('get_post') ) {
         $post = get_post();
-        if ( $post && has_shortcode( $post->post_content, 'trade_proposal_form' ) ) {
+        if ( $post && (has_shortcode( $post->post_content, 'trade_proposal_form' ) || has_shortcode( $post->post_content, 'league_trade_block' )) ) {
             $load_trade_js = true;
         }
     }
@@ -58,7 +58,8 @@ function twentytwentytwo_child_enqueue_styles() {
             has_shortcode( $post->post_content, 'fa_bidding_history' ) || 
             has_shortcode( $post->post_content, 'fa_bid_calculator' ) || 
             has_shortcode( $post->post_content, 'my_team_roster' ) ||
-            has_shortcode( $post->post_content, 'free_agent_list' )
+            has_shortcode( $post->post_content, 'free_agent_list' ) ||
+            has_shortcode( $post->post_content, 'league_trade_block' )
         ) ) {
             $load_fa_modal_js = true;
         }

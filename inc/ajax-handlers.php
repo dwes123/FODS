@@ -495,7 +495,7 @@ function handle_accept_trade() {
 
     // --- Transfer ISBP Funds (Central Options Table) ---
     $transfer_isbp = function($league, $from_team, $to_team, $amount) {
-        if ($amount <= 0 || !$from_team || !$to_team) return; 
+        if ($amount <= 0 || !$from_team || !$to_team) return;
         
         $field_name = 'isbp_' . strtolower($league);
         $rows = get_field($field_name, 'option') ?: [];
@@ -844,63 +844,6 @@ function get_team_financials_ajax_handler() {
     ]);
 }
 add_action('wp_ajax_get_team_financials', 'get_team_financials_ajax_handler');
-
-/**
- * AJAX: Get Trade Info by Player ID (for Deep Linking)
- */
-function get_player_trade_info_ajax_handler() {
-    if ( !is_user_logged_in() ) wp_send_json_error();
-    $pid = isset($_POST['player_id']) ? absint($_POST['player_id']) : 0;
-    if (!$pid) wp_send_json_error();
-
-    $league_id = get_field('league_id', $pid);
-    $team_id = get_field('fantasy_team_id', $pid);
-    
-    // Find Manager ID
-    $manager_id = 0;
-    $users = get_users();
-    foreach ($users as $user) {
-        $teams = get_field('managed_teams', 'user_' . $user->ID);
-        if ($teams) {
-            foreach ($teams as $t) {
-                if (($t['league_id']??'') === $league_id && ($t['fantasy_team_id']??'') === $team_id) {
-                    $manager_id = $user->ID;
-                    break 2;
-                }
-            }
-        }
-    }
-
-    wp_send_json_success([
-        'league_id' => $league_id,
-        'manager_id' => $manager_id,
-        'player_id' => $pid
-    ]);
-}
-add_action('wp_ajax_get_player_trade_info', 'get_player_trade_info_ajax_handler');
-
-/**
- * AJAX: Toggle Trade Block Status
- */
-function toggle_trade_block_status_handler() {
-    check_ajax_referer('roster_move_nonce', 'nonce'); // Reuse roster nonce
-    if ( ! is_user_logged_in() ) wp_send_json_error('Not logged in.');
-
-    $player_id = isset($_POST['player_id']) ? absint($_POST['player_id']) : 0;
-    $action    = isset($_POST['block_action']) ? sanitize_text_field($_POST['block_action']) : '';
-
-    if ( !$player_id || !$action ) wp_send_json_error('Missing data.');
-    if ( ! is_user_owner_of_player(get_current_user_id(), $player_id) ) wp_send_json_error('Permission denied.');
-
-    if ( $action === 'add' ) {
-        update_field('on_trade_block', true, $player_id);
-        wp_send_json_success('Player added to Trade Block.');
-    } else {
-        update_field('on_trade_block', false, $player_id);
-        wp_send_json_success('Player removed from Trade Block.');
-    }
-}
-add_action('wp_ajax_toggle_trade_block', 'toggle_trade_block_status_handler');
 
 function dfa_player_ajax_handler() {
     check_ajax_referer('dfa_player_nonce', 'nonce');
@@ -1325,3 +1268,52 @@ function fod_has_team_restructured_this_year($team_id, $year) {
     }
     return false;
 }
+
+/**
+ * AJAX: Toggle Trade Block status and update notes
+ */
+function fod_update_trade_block_handler() {
+    check_ajax_referer('roster_move_nonce', 'nonce');
+    if ( !is_user_logged_in() ) { wp_send_json_error('Not logged in.'); }
+
+    $player_id = isset($_POST['player_id']) ? absint($_POST['player_id']) : 0;
+    // Explicitly cast to boolean for ACF
+    $on_block  = (isset($_POST['on_block']) && $_POST['on_block'] == '1');
+    $notes     = isset($_POST['notes']) ? sanitize_text_field($_POST['notes']) : '';
+
+    if ( !$player_id ) { wp_send_json_error('Invalid player ID.'); }
+
+    // Ownership check
+    if ( !is_user_owner_of_player( get_current_user_id(), $player_id ) ) {
+        wp_send_json_error('You do not have permission to manage this player.');
+    }
+
+    // Update using ACF keys - this is the most reliable way to handle booleans/toggles
+    if ( function_exists('update_field') ) {
+        update_field('field_trade_block_toggle', $on_block, $player_id);
+        if ($on_block) {
+            update_field('field_trade_block_notes', $notes, $player_id);
+        }
+    } else {
+        // Fallback to direct meta if ACF isn't available
+        update_post_meta($player_id, 'on_trade_block', $on_block ? '1' : '0');
+        update_post_meta($player_id, 'trade_block_notes', $notes);
+    }
+
+    // --- AGGRESSIVE CACHE BUSTING ---
+    // 1. Clear the specific post cache
+    clean_post_cache($player_id);
+    
+    // 2. Clear object cache if a persistent cache (Redis/Memcached) is used
+    if ( function_exists('wp_cache_delete') ) {
+        wp_cache_delete($player_id, 'posts');
+        wp_cache_delete('on_trade_block', 'post_meta');
+    }
+
+    // 3. Update a "last modified" option to bust shortcode query caches
+    update_option('fod_trade_block_last_updated', time());
+
+    $msg = $on_block ? 'Player added to trade block.' : 'Player removed from trade block.';
+    wp_send_json_success(['message' => $msg]);
+}
+add_action('wp_ajax_update_trade_block', 'fod_update_trade_block_handler');

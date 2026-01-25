@@ -59,12 +59,12 @@ jQuery(document).ready(function($) {
             updateDropdown(playersRequestedSelectId, [], '-- Select League & Target Manager First --', '-- Select League & Target Manager First --', targetPlayersCache);
             $(playersRequestedSelectId).prop('disabled', true);
             $(submitButtonId).prop('disabled', true);
-            return Promise.resolve();
+            return;
         }
         toggleLoading(targetManagerLoadingSpanId, true);
         updateDropdown(targetManagerSelectId, [], 'Loading Managers...', 'Loading Managers...');
 
-        return $.ajax({
+        $.ajax({
             url: tradeFormAjax.ajax_url,
             type: 'POST',
             data: {
@@ -98,12 +98,12 @@ jQuery(document).ready(function($) {
             updateDropdown(playersOfferedSelectId, [], '-- Select League First --', '-- Select League First --', myPlayersCache);
             $(playersOfferedSelectId).prop('disabled', true);
             $(submitButtonId).prop('disabled', true);
-            return Promise.resolve();
+            return;
         }
         toggleLoading(playersOfferedLoadingSpanId, true);
         updateDropdown(playersOfferedSelectId, [], 'Loading Your Players...', 'Loading Your Players...', myPlayersCache);
 
-        return $.ajax({
+        $.ajax({
             url: tradeFormAjax.ajax_url,
             type: 'POST',
             data: {
@@ -138,7 +138,7 @@ jQuery(document).ready(function($) {
             updateDropdown(playersRequestedSelectId, [], '-- Select League & Target Manager First --', '-- Select League & Target Manager First --', targetPlayersCache);
             $(playersRequestedSelectId).prop('disabled', true);
             $(submitButtonId).prop('disabled', true);
-            return Promise.resolve();
+            return;
         }
         toggleLoading(playersRequestedLoadingSpanId, true);
         updateDropdown(playersRequestedSelectId, [], 'Loading Target Players...', 'Loading Target Players...', targetPlayersCache);
@@ -149,7 +149,7 @@ jQuery(document).ready(function($) {
             $('#target-isbp-balance-display').text('Available: $' + parseInt(targetMgr.isbp_balance).toLocaleString());
         }
 
-        return $.ajax({
+        $.ajax({
             url: tradeFormAjax.ajax_url,
             type: 'POST',
             data: {
@@ -425,54 +425,91 @@ jQuery(document).ready(function($) {
     $(playersRequestedSelectId).prop('disabled', true);
     $(submitButtonId).prop('disabled', true);
 
-    // --- Deep Linking & Modal Logic ---
-    function initiateTradeWithPlayer(pid) {
-        $.post(tradeFormAjax.ajax_url, {
-            action: 'get_player_trade_info',
-            nonce: tradeFormAjax.nonce,
-            player_id: pid
-        }, function(res) {
-            if(res.success) {
-                const lid = res.data.league_id;
-                const mid = res.data.manager_id;
-                const pid = res.data.player_id;
-
-                $(leagueSelectId).val(lid);
-                
-                // Chain calls
-                fetchTradeableManagers(lid).then(function() {
-                    $(targetManagerSelectId).val(mid);
-                    return fetchTargetPlayers(lid, mid);
-                }).then(function() {
-                    $(playersRequestedSelectId).val(pid);
-                    updateRetentionUI();
-                    validateFormState();
-                });
-                
-                fetchMyPlayers(lid);
-            }
-        });
-    }
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const prePlayerId = urlParams.get('pre_player');
-
-    if (prePlayerId) {
-        initiateTradeWithPlayer(prePlayerId);
-    } else if ($(leagueSelectId).val()) {
+    if ($(leagueSelectId).val()) {
         $(leagueSelectId).trigger('change');
     }
 
-    // Modal Trigger from Trade Block
-    $(document).on('click', '.trade-block-propose-btn', function(e) {
+    // --- NEW: Trade Proposal Modal Logic ---
+    const tradeProposalModal = $('#trade-proposal-modal');
+    
+    $(document).on('click', '.open-trade-proposal-modal', function(e) {
         e.preventDefault();
-        const pid = $(this).data('playerid');
-        $('#trade-proposal-modal').removeClass('fa-modal-hidden');
-        initiateTradeWithPlayer(pid);
+        const btn = $(this);
+        const league = btn.data('league');
+        const manager = btn.data('manager');
+        const player = btn.data('player');
+
+        // Reset and Show Modal
+        tradeProposalModal.removeClass('fa-modal-hidden');
+        
+        // Trigger population
+        if (league) {
+            $(leagueSelectId).val(league).trigger('change');
+            
+            // Wait for managers to load
+            const waitForManagers = setInterval(function() {
+                if ($(targetManagerSelectId + ' option[value="' + manager + '"]').length) {
+                    clearInterval(waitForManagers);
+                    $(targetManagerSelectId).val(manager).trigger('change');
+                    
+                    // Wait for players to load
+                    const waitForPlayers = setInterval(function() {
+                        if ($(playersRequestedSelectId + ' option[value="' + player + '"]').length) {
+                            clearInterval(waitForPlayers);
+                            $(playersRequestedSelectId).val([player]).trigger('change');
+                        }
+                    }, 100);
+                    setTimeout(() => clearInterval(waitForPlayers), 5000);
+                }
+            }, 100);
+            setTimeout(() => clearInterval(waitForManagers), 5000);
+        }
     });
 
-    // Close Modal
-    $(document).on('click', '#trade-proposal-modal .fa-modal-close', function() {
-        $('#trade-proposal-modal').addClass('fa-modal-hidden');
+    // Close Modal Logic (Shared with other modals)
+    $(document).on('click', '#trade-proposal-modal .fa-modal-close, #trade-proposal-modal .fa-modal-cancel', function() {
+        tradeProposalModal.addClass('fa-modal-hidden');
+        // Optionally reset form
+        $('#trade-proposal-form')[0].reset();
+        $(targetManagerSelectId).prop('disabled', true);
+        $(playersOfferedSelectId).prop('disabled', true).val([]);
+        $(playersRequestedSelectId).prop('disabled', true).val([]);
+        $('#trade-summary-preview').hide();
     });
+
+    // --- NEW: Handle Pre-filled URL Parameters (from Trade Block) ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const preLeague = urlParams.get('trade_league');
+    const preTargetManager = urlParams.get('target_manager');
+    const preRequestedPlayer = urlParams.get('requested_player');
+
+    if (preLeague) {
+        $(leagueSelectId).val(preLeague).trigger('change');
+        
+        // We need to wait for managers to load before selecting the target manager
+        if (preTargetManager) {
+            const waitForManagers = setInterval(function() {
+                if ($(targetManagerSelectId + ' option[value="' + preTargetManager + '"]').length) {
+                    clearInterval(waitForManagers);
+                    $(targetManagerSelectId).val(preTargetManager).trigger('change');
+                    
+                    // We need to wait for target players to load before selecting the requested player
+                    if (preRequestedPlayer) {
+                        const waitForPlayers = setInterval(function() {
+                            if ($(playersRequestedSelectId + ' option[value="' + preRequestedPlayer + '"]').length) {
+                                clearInterval(waitForPlayers);
+                                // For multiple select, we might want to append if already some selected, 
+                                // but for a direct redirect, setting the value is fine.
+                                $(playersRequestedSelectId).val([preRequestedPlayer]).trigger('change');
+                            }
+                        }, 100);
+                        // Timeout after 5 seconds to prevent infinite loop
+                        setTimeout(() => clearInterval(waitForPlayers), 5000);
+                    }
+                }
+            }, 100);
+            // Timeout after 5 seconds to prevent infinite loop
+            setTimeout(() => clearInterval(waitForManagers), 5000);
+        }
+    }
 });

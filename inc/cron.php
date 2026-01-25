@@ -55,8 +55,8 @@ function fa_bid_finalization_handler() {
             $league_id = get_post_meta($player_id, 'league_id', true);
             $bid_type = get_post_meta($player_id, 'bid_type', true);
 
-            // --- Case 1: MiLB Contract ---
-            if ( $bid_type === 'milb' && !empty($winning_team_id) ) {
+            // --- Case 1: MiLB Contract OR ISBP Signing ---
+            if ( ($bid_type === 'milb' || $bid_type === 'isbp') && !empty($winning_team_id) ) {
                 update_post_meta($player_id, 'fantasy_team_id', $winning_team_id);
                 update_post_meta($player_id, 'fa_status', 'rostered');
                 update_post_meta($player_id, 'status_40_man', ''); // Ensure off 40-man
@@ -64,8 +64,10 @@ function fa_bid_finalization_handler() {
                 // Clear Contracts
                 for ($y = 2026; $y <= 2040; $y++) { delete_post_meta($player_id, 'contract_' . $y); }
 
-                // Deduct MiLB Balance
-                $field_name = 'milb_' . strtolower($league_id);
+                // Deduct Balance (MiLB or ISBP)
+                $balance_type = ($bid_type === 'isbp') ? 'isbp' : 'milb';
+                $field_name = $balance_type . '_' . strtolower($league_id);
+                
                 $rows = get_field($field_name, 'option') ?: [];
                 foreach ($rows as $idx => $row) {
                     if (($row['team_id'] ?? '') === $winning_team_id) {
@@ -77,12 +79,13 @@ function fa_bid_finalization_handler() {
 
                 // Log
                 if ( function_exists('log_league_transaction') ) {
+                    $type_label = ($bid_type === 'isbp') ? 'International Signing (ISBP)' : 'Free Agent Signing (MiLB)';
                     log_league_transaction([
-                        'transaction_type' => 'Free Agent Signing (MiLB)',
+                        'transaction_type' => $type_label,
                         'player_ids'       => [$player_id],
                         'primary_team'     => $winning_team_id,
                         'league_id'        => $league_id,
-                        'summary'          => esc_html($player_name) . ' signed to a Minor League contract by ' . esc_html($winning_team_id) . ' ($' . number_format($winning_bid_points) . ').',
+                        'summary'          => esc_html($player_name) . " signed via $type_label by " . esc_html($winning_team_id) . ' ($' . number_format($winning_bid_points) . ').',
                     ]);
                 }
 

@@ -1132,6 +1132,52 @@
             "first_day": 1,
             "default_to_current_date": 0,
             "allow_in_bindings": 0
+        },
+        {
+            "key": "field_trade_block_toggle",
+            "label": "On Trade Block?",
+            "name": "on_trade_block",
+            "type": "true_false",
+            "instructions": "Show this player on the league-wide Trade Block page.",
+            "required": 0,
+            "conditional_logic": 0,
+            "wrapper": {
+                "width": "25",
+                "class": "",
+                "id": ""
+            },
+            "message": "",
+            "default_value": 0,
+            "ui": 1,
+            "ui_on_text": "On Block",
+            "ui_off_text": "Off"
+        },
+        {
+            "key": "field_trade_block_notes",
+            "label": "Trade Block Notes",
+            "name": "trade_block_notes",
+            "type": "text",
+            "instructions": "e.g., Looking for SP help",
+            "required": 0,
+            "conditional_logic": [
+                [
+                    {
+                        "field": "field_trade_block_toggle",
+                        "operator": "==",
+                        "value": "1"
+                    }
+                ]
+            ],
+            "wrapper": {
+                "width": "75",
+                "class": "",
+                "id": ""
+            },
+            "default_value": "",
+            "placeholder": "Enter needs...",
+            "maxlength": "",
+            "prepend": "",
+            "append": ""
         }
     ],
     "location": [
