@@ -747,10 +747,16 @@ h1.wp-block-post-title,
     border: none !important;
 }
 
-/* Remove any SVG separators or hr lines at the top */
+/* Remove any SVG separators or hr lines at the top - BUT SPARE THE NAVIGATION SVG */
 .home header hr,
-.home header svg {
+.home header .wp-block-separator {
     display: none !important;
+}
+
+/* Ensure navigation SVGs are actually visible */
+.home .wp-block-navigation-item__dropdown-icon {
+    display: inline-block !important;
+    visibility: visible !important;
 }
 
 .home main.wp-block-group,
