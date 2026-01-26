@@ -7,7 +7,7 @@
 
 function fod_player_importer_menu() {
     add_submenu_page(
-        'tools.php',
+        'commissioner-tools', // Parent Slug
         'Import Players',
         'Import Players',
         'manage_options',
@@ -15,7 +15,7 @@ function fod_player_importer_menu() {
         'fod_render_player_importer_page'
     );
 }
-add_action('admin_menu', 'fod_player_importer_menu');
+add_action('admin_menu', 'fod_player_importer_menu', 20);
 
 function fod_render_player_importer_page() {
     if ( ! current_user_can('manage_options') ) {

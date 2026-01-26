@@ -1293,6 +1293,37 @@ function fod_update_trade_block_handler() {
         update_field('field_trade_block_toggle', $on_block, $player_id);
         if ($on_block) {
             update_field('field_trade_block_notes', $notes, $player_id);
+            
+            // --- SLACK ANNOUNCEMENT ---
+            $player_name = get_the_title($player_id);
+            $team_id     = get_post_meta($player_id, 'fantasy_team_id', true);
+            $pos         = get_post_meta($player_id, 'position', true);
+            
+            $contract_summary = "";
+            foreach (range(2026, 2028) as $y) {
+                $val = get_post_meta($player_id, 'contract_' . $y, true);
+                if ($val) {
+                    if (is_numeric($val)) {
+                        $fmt = ($val >= 1000000) ? round($val/1000000, 1) . 'M' : round($val/1000) . 'K';
+                        $contract_summary .= "'$y: $$fmt, ";
+                    } else {
+                        $contract_summary .= "'$y: $val, ";
+                    }
+                }
+            }
+            $contract_summary = rtrim($contract_summary, ", ");
+
+            $slack_msg = "📢 *Trade Block Alert:* _" . $player_name . "_ (" . $team_id . " - " . $pos . ") has been added to the board!\n";
+            $slack_msg .= "💰 *Contract:* " . ($contract_summary ?: "N/A") . "\n";
+            if (!empty($notes)) {
+                $slack_msg .= "📝 *Notes:* " . $notes;
+            }
+
+            if (function_exists('fod_send_slack_notification')) {
+                $league_id = get_post_meta($player_id, 'league_id', true);
+                fod_send_slack_notification($slack_msg, $league_id);
+            }
+            // --------------------------
         }
     } else {
         // Fallback to direct meta if ACF isn't available

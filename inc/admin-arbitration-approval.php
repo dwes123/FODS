@@ -5,15 +5,15 @@
 
 function fod_arb_approval_tool_menu() {
     add_submenu_page(
-        'tools.php',
+        'commissioner-tools', // Parent Slug
         'Arbitration Approvals',
         'Arbitration Approvals',
-        'read', // Allow subscribers to access if they are commissioners
+        'read', // Capability (checked inside the function for commissioner status)
         'fod-arb-approvals',
         'fod_render_arb_approval_page'
     );
 }
-add_action('admin_menu', 'fod_arb_approval_tool_menu');
+add_action('admin_menu', 'fod_arb_approval_tool_menu', 20); // Higher priority to run after parent menu
 
 function fod_render_arb_approval_page() {
     $user_id = get_current_user_id();

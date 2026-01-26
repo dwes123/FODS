@@ -239,6 +239,46 @@ if( function_exists('acf_add_local_field_group') ) {
                     ),
                 ),
             ),
+            array(
+                'key' => 'field_slack_settings_tab',
+                'label' => 'Slack Integration',
+                'type' => 'tab',
+                'placement' => 'top',
+                'endpoint' => 0,
+            ),
+            array(
+                'key' => 'field_slack_webhooks_repeater',
+                'label' => 'League Slack Webhooks',
+                'name' => 'league_slack_webhooks',
+                'type' => 'repeater',
+                'instructions' => 'Add a unique Webhook URL for each league channel.',
+                'required' => 0,
+                'layout' => 'table',
+                'button_label' => 'Add League Webhook',
+                'sub_fields' => array(
+                    array(
+                        'key' => 'field_slack_league_id',
+                        'label' => 'League ID',
+                        'name' => 'league_id',
+                        'type' => 'select',
+                        'choices' => array(
+                            'MLB' => 'MLB',
+                            'AAA' => 'AAA',
+                            'AA'  => 'AA',
+                            'NBA' => 'NBA',
+                        ),
+                        'required' => 1,
+                    ),
+                    array(
+                        'key' => 'field_slack_league_url',
+                        'label' => 'Webhook URL',
+                        'name' => 'webhook_url',
+                        'type' => 'url',
+                        'required' => 1,
+                        'placeholder' => 'https://hooks.slack.com/services/...',
+                    ),
+                ),
+            ),
         ),
         'location' => array(
             array(

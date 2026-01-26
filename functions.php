@@ -36,6 +36,7 @@ require_once get_stylesheet_directory() . '/inc/csv-importer.php';
 
 // Load Player Assignment Tool
 require_once get_stylesheet_directory() . '/inc/admin-player-assign.php';
+require_once get_stylesheet_directory() . '/inc/admin-quick-add-player.php';
 
 // Load Weekly Rotation System
 require_once get_stylesheet_directory() . '/inc/weekly-rotations.php';
@@ -61,6 +62,31 @@ require_once get_stylesheet_directory() . '/inc/team-options.php';
 
 // Load Mobile API Endpoints
 require_once get_stylesheet_directory() . '/inc/api-endpoints.php';
+
+/**
+ * Register the MLB/MiLB Player Custom Post Type (playerdata)
+ */
+function fod_register_playerdata_cpt() {
+    $args = array(
+        'label'                 => __( 'Players', 'text_domain' ),
+        'labels'                => array(
+            'name'          => 'Players',
+            'singular_name' => 'Player',
+            'menu_name'     => 'Players',
+            'add_new'       => 'Add New Player',
+            'add_new_item'  => 'Add New Player',
+        ),
+        'supports'              => array( 'title', 'custom-fields', 'editor' ),
+        'public'                => true,
+        'show_ui'               => true,
+        'menu_position'         => 5,
+        'menu_icon'             => 'dashicons-groups',
+        'has_archive'           => false,
+        'show_in_rest'          => true, // Required for Block Editor and API
+    );
+    register_post_type( 'playerdata', $args );
+}
+add_action( 'init', 'fod_register_playerdata_cpt', 0 );
 
 /**
  * Register the NBA Player Custom Post Type

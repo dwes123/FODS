@@ -5,7 +5,7 @@
 
 function fod_assign_player_tool_menu() {
     $hook = add_submenu_page(
-        'tools.php',
+        'commissioner-tools', // Parent Slug
         'Assign Player',
         'Assign Player',
         'manage_options',

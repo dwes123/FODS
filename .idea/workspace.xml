@@ -6,74 +6,17 @@
   <component name="ChangeListManager">
     <list default="true" id="ba70289f-d978-48dc-b31c-be0d544f9685" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/JS/fa-modal.js" beforeDir="false" afterPath="$PROJECT_DIR$/JS/fa-modal.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/JS/trade-form-ajax.js" beforeDir="false" afterPath="$PROJECT_DIR$/JS/trade-form-ajax.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - ALB.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - BUF.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - CHA.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - COL.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - DUR.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - EP.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - GWI.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - IND.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - IOWA.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - JAC.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - LEH.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - LOU.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - LV.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - MEM.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - NOR.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - NSH.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - OKC.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - OMA.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - RENO.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - ROC.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - RR.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - SAC.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - SLC.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - SUG.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - SWB.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - SYR.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - TAC.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - TOL.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/clean_rosters/clean_Moneyball - AAA - WOR.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - ALB.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - BUF.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - CHA.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - COL.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - DUR.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - EP.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - GWI.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - IND.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - IOWA.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - JAC.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - LEH.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - LOU.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - LV.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - MEM.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - NOR.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - NSH.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - OKC.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - OMA.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - RENO.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - ROC.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - RR.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - SAC.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - SLC.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - SUG.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - SWB.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - SYR.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - TAC.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - TOL.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Python/raw_rosters/Moneyball - AAA - WOR.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/acf-json/group_6814f3d464e22.json" beforeDir="false" afterPath="$PROJECT_DIR$/acf-json/group_6814f3d464e22.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/acf-json/group_68cf3f6867a87.json" beforeDir="false" afterPath="$PROJECT_DIR$/acf-json/group_68cf3f6867a87.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/functions.php" beforeDir="false" afterPath="$PROJECT_DIR$/functions.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/inc/acf.php" beforeDir="false" afterPath="$PROJECT_DIR$/inc/acf.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/inc/admin-arbitration-approval.php" beforeDir="false" afterPath="$PROJECT_DIR$/inc/admin-arbitration-approval.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/inc/admin-player-assign.php" beforeDir="false" afterPath="$PROJECT_DIR$/inc/admin-player-assign.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/inc/admin.php" beforeDir="false" afterPath="$PROJECT_DIR$/inc/admin.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/inc/ajax-handlers.php" beforeDir="false" afterPath="$PROJECT_DIR$/inc/ajax-handlers.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/inc/cron.php" beforeDir="false" afterPath="$PROJECT_DIR$/inc/cron.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/inc/csv-importer.php" beforeDir="false" afterPath="$PROJECT_DIR$/inc/csv-importer.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/inc/enqueue.php" beforeDir="false" afterPath="$PROJECT_DIR$/inc/enqueue.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/inc/roster-helpers.php" beforeDir="false" afterPath="$PROJECT_DIR$/inc/roster-helpers.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/inc/shortcodes.php" beforeDir="false" afterPath="$PROJECT_DIR$/inc/shortcodes.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/style.css" beforeDir="false" afterPath="$PROJECT_DIR$/style.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/inc/transactions.php" beforeDir="false" afterPath="$PROJECT_DIR$/inc/transactions.php" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -118,30 +61,30 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;Python.import_free_agents.executor&quot;: &quot;Run&quot;,
-    &quot;Python.process_league_data.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
-    &quot;dart.analysis.tool.window.visible&quot;: &quot;false&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;feature/contract-management-tools&quot;,
-    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/Dan/Desktop/Front Office Dynasty Sports&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;terminal&quot;,
-    &quot;show.migrate.to.gradle.popup&quot;: &quot;false&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Python.import_free_agents.executor": "Run",
+    "Python.process_league_data.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "dart.analysis.tool.window.visible": "false",
+    "git-widget-placeholder": "MainOneTwentyFiveTwentySix",
+    "ignore.virus.scanning.warn.message": "true",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "C:/Users/Dan/Desktop/Front Office Dynasty Sports",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "terminal",
+    "show.migrate.to.gradle.popup": "false",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RunManager" selected="Python.process_league_data">
     <configuration name="import_free_agents" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Front Office Dynasty Sports" />
@@ -229,7 +172,7 @@
       <workItem from="1768443350598" duration="3425000" />
       <workItem from="1768525494312" duration="67922000" />
       <workItem from="1769143591064" duration="197000" />
-      <workItem from="1769143805562" duration="20051000" />
+      <workItem from="1769143805562" duration="30269000" />
     </task>
     <servers />
   </component>

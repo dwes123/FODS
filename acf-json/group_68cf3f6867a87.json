@@ -112,6 +112,25 @@
             "placeholder": "",
             "prepend": "",
             "append": ""
+        },
+        {
+            "key": "field_fantrax_processed",
+            "label": "Processed on Fantrax?",
+            "name": "fantrax_processed",
+            "type": "true_false",
+            "instructions": "Check this once the transaction has been manually entered on the Fantrax website.",
+            "required": 0,
+            "conditional_logic": 0,
+            "wrapper": {
+                "width": "",
+                "class": "",
+                "id": ""
+            },
+            "message": "Transaction is officially on Fantrax",
+            "default_value": 0,
+            "ui": 1,
+            "ui_on_text": "Processed",
+            "ui_off_text": "Pending"
         }
     ],
     "location": [

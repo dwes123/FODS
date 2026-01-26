@@ -91,3 +91,94 @@ function my_fantasy_transaction_handler( $args ) {
     log_league_transaction( $args );
 }
 add_action( 'my_fantasy_transaction', 'my_fantasy_transaction_handler' );
+
+/* ------------------------------------------------------------------------
+   Admin Enhancements for Transactions (Fantrax Tracking)
+------------------------------------------------------------------------ */
+
+// 1. Add "Fantrax" status column to the list
+function fod_set_transaction_columns($columns) {
+    $new_columns = [];
+    foreach($columns as $key => $value) {
+        $new_columns[$key] = $value;
+        if ($key === 'title') {
+            $new_columns['fantrax_status'] = 'Fantrax';
+            $new_columns['league_id'] = 'League';
+        }
+    }
+    return $new_columns;
+}
+add_filter('manage_transaction_posts_columns', 'fod_set_transaction_columns');
+
+// 2. Populate the column with a toggle link
+function fod_populate_transaction_columns($column, $post_id) {
+    if ($column === 'fantrax_status') {
+        $processed = get_field('fantrax_processed', $post_id);
+        $url = wp_nonce_url(admin_url('admin-post.php?action=toggle_fantrax_processed&post_id=' . $post_id), 'toggle_fantrax_' . $post_id);
+        
+        if ($processed) {
+            echo '<a href="' . esc_url($url) . '" title="Mark as Pending"><span class="dashicons dashicons-yes" style="color: green; font-size: 30px;"></span></a>';
+        } else {
+            echo '<a href="' . esc_url($url) . '" title="Mark as Processed"><span class="dashicons dashicons-no-alt" style="color: red; font-size: 30px;"></span></a>';
+        }
+    }
+    if ($column === 'league_id') {
+        echo esc_html(get_post_meta($post_id, 'league_id', true));
+    }
+}
+add_action('manage_transaction_posts_custom_column', 'fod_populate_transaction_columns', 10, 2);
+
+// 3. Handle the quick-toggle action
+function fod_handle_fantrax_toggle() {
+    if (!isset($_GET['post_id']) || !current_user_can('manage_options')) {
+        wp_die('Unauthorized');
+    }
+
+    $post_id = absint($_GET['post_id']);
+    check_admin_referer('toggle_fantrax_' . $post_id);
+
+    $current_status = get_field('fantrax_processed', $post_id);
+    update_field('fantrax_processed', !$current_status, $post_id);
+
+    wp_redirect(wp_get_referer());
+    exit;
+}
+add_action('admin_post_toggle_fantrax_processed', 'fod_handle_fantrax_toggle');
+
+/**
+ * Helper to send messages to a Slack channel via Webhook.
+ * Now routes to the correct channel based on League ID.
+ */
+function fod_send_slack_notification($message, $league_id = '') {
+    $webhooks = get_field('league_slack_webhooks', 'option');
+    $webhook_url = '';
+
+    if ( is_array($webhooks) ) {
+        foreach ( $webhooks as $row ) {
+            if ( strtoupper($row['league_id'] ?? '') === strtoupper($league_id) ) {
+                $webhook_url = $row['webhook_url'];
+                break;
+            }
+        }
+    }
+
+    // If no league match found, do not send (or could fallback to a general channel if defined)
+    if (empty($webhook_url)) {
+        return;
+    }
+
+    $payload = [
+        'text' => $message
+    ];
+
+    wp_remote_post($webhook_url, [
+        'method'      => 'POST',
+        'timeout'     => 15,
+        'redirection' => 5,
+        'httpversion' => '1.0',
+        'blocking'    => true,
+        'headers'     => ['Content-Type' => 'application/json'],
+        'body'        => json_encode($payload),
+        'cookies'     => []
+    ]);
+}

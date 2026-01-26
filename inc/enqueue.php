@@ -87,7 +87,7 @@ function twentytwentytwo_child_enqueue_styles() {
         );
 
         // Enqueue Extension Calculator (for Roster Page)
-        wp_enqueue_script('fod-extension-js', get_stylesheet_directory_uri() . '/js/extension-calculator.js', array('jquery'), '1.0', true);
+        wp_enqueue_script('fod-extension-js', get_stylesheet_directory_uri() . '/js/extension-calculator.js', array('jquery'), '1.1', true);
         wp_localize_script('fod-extension-js', 'fodExtData', array(
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('extension_calc_nonce')
