@@ -22,17 +22,31 @@ function fod_calculate_bid_points($years, $aav) {
  * Checks if a given user is the manager of the team that owns a specific player.
  */
 function is_user_owner_of_player( $user_id, $player_id ) {
-    if ( ! $user_id || ! $player_id || ! function_exists('get_field') ) { return false; }
-    $player_team_id = get_field('fantasy_team_id', $player_id);
-    $player_league_id = get_field('league_id', $player_id);
+    if ( ! $user_id || ! $player_id ) { return false; }
+    
+    // Get player's current assignment directly from database to avoid cache issues
+    $player_team_id = get_post_meta($player_id, 'fantasy_team_id', true);
+    $player_league_id = get_post_meta($player_id, 'league_id', true);
+    
     if ( empty($player_team_id) ) { return false; }
+
+    // Get manager's assigned teams
     $managed_teams = get_field('managed_teams', 'user_' . $user_id);
     if ( empty($managed_teams) || ! is_array($managed_teams) ) { return false; }
+
     foreach ( $managed_teams as $team ) {
-        if ( is_array($team) && ($team['league_id'] ?? '') === $player_league_id && ($team['fantasy_team_id'] ?? '') === $player_team_id ) {
+        if ( !is_array($team) ) continue;
+        
+        $m_league = $team['league_id'] ?? '';
+        $m_team   = $team['fantasy_team_id'] ?? '';
+
+        // Case-insensitive comparison to prevent string mismatch errors
+        if ( strtoupper(trim($m_league)) === strtoupper(trim($player_league_id)) && 
+             strtoupper(trim($m_team))   === strtoupper(trim($player_team_id)) ) {
             return true;
         }
     }
+    
     return false;
 }
 

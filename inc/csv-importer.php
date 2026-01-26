@@ -90,11 +90,24 @@ function fod_render_player_importer_page() {
                 if ( $existing_player_id && ! is_wp_error($existing_player_id) ) {
                     // --- MAP ALL FIELDS ---
                     foreach ($data as $key => $value) {
-                        if ($key === 'name') continue;
+                        $key = trim($key);
+                        if ($key === 'name' || empty($key)) continue;
                         
-                        if ( ! empty($key) ) {
-                            update_post_meta($existing_player_id, $key, $value);
+                        // Special handling for boolean/checkbox fields
+                        if ($key === 'is_international_free_agent' || $key === 'on_trade_block') {
+                            $value = ($value == '1' || strtolower($value) === 'true' || strtolower($value) === 'x') ? '1' : '0';
                         }
+
+                        update_post_meta($existing_player_id, $key, $value);
+                    }
+
+                    // --- SET DEFAULT FA STATUS IF MISSING ---
+                    $current_status = get_post_meta($existing_player_id, 'fa_status', true);
+                    $current_team = get_post_meta($existing_player_id, 'fantasy_team_id', true);
+                    
+                    if ( empty($current_status) ) {
+                        $new_status = !empty($current_team) ? 'rostered' : 'available';
+                        update_post_meta($existing_player_id, 'fa_status', $new_status);
                     }
                 } else {
                     $errors[] = "Failed to import: " . $player_name;
