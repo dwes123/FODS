@@ -235,7 +235,8 @@ function fod_submit_extension_request_handler() {
         add_row('extension_usage_log', [
             'team_id'     => $team_id,
             'league_year' => $current_year,
-            'player_id'   => $player_id
+            'player_id'   => $player_id,
+            'player_name' => $player_name
         ], 'option');
 
         wp_send_json_success('Extension request submitted for approval!');

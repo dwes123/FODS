@@ -246,8 +246,39 @@ function display_manager_roster_shortcode() {
     echo '<tbody>';
     echo '<tr><td><strong>ISBP Balance</strong></td><td>$' . number_format($isbp_bal) . '</td></tr>';
     echo '<tr><td><strong>MILB Allowance</strong></td><td>$' . number_format($milb_bal) . '</td></tr>';
-    echo '<tr><td><strong>Contract Extensions</strong></td><td>' . $ext_count . ' / 2 Used</td></tr>';
-    echo '<tr><td><strong>Restructures</strong></td><td>' . $res_count . ' / 1 Used</td></tr>';
+    
+    // Extensions Tracking
+    $ext_list = [];
+    $ext_log_data = get_field('extension_usage_log', 'option');
+    if (is_array($ext_log_data)) {
+        foreach ($ext_log_data as $log) {
+            $log_team = trim(strtoupper($log['team_id'] ?? ''));
+            $curr_team = trim(strtoupper($selected_team_id));
+            if ($log_team === $curr_team && (int)($log['league_year']??0) === (int)$current_year) {
+                $p_name = $log['player_name'] ?? get_the_title($log['player_id'] ?? 0);
+                if ($p_name) $ext_list[] = $p_name;
+            }
+        }
+    }
+    $ext_display = !empty($ext_list) ? ' (' . implode(', ', $ext_list) . ')' : '';
+    echo '<tr><td><strong>Contract Extensions</strong></td><td>' . $ext_count . ' / 2 Used' . esc_html($ext_display) . '</td></tr>';
+    
+    // Restructures Tracking
+    $res_list = [];
+    $res_log_data = get_field('restructure_usage_log', 'option');
+    if (is_array($res_log_data)) {
+        foreach ($res_log_data as $log) {
+            $log_team = trim(strtoupper($log['team_id'] ?? ''));
+            $curr_team = trim(strtoupper($selected_team_id));
+            if ($log_team === $curr_team && (int)($log['league_year']??0) === (int)$current_year) {
+                $p_name = $log['player_name'] ?? get_the_title($log['player_id'] ?? 0);
+                if ($p_name) $res_list[] = $p_name;
+            }
+        }
+    }
+    $res_display = !empty($res_list) ? ' (' . implode(', ', $res_list) . ')' : '';
+    echo '<tr><td><strong>Restructures</strong></td><td>' . $res_count . ' / 1 Used' . esc_html($res_display) . '</td></tr>';
+    
     echo '</tbody></table>';
 
     // Salary Table

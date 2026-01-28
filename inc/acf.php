@@ -677,6 +677,13 @@ if( function_exists('acf_add_local_field_group') ) {
                         'name' => 'player_id',
                         'type' => 'number',
                     ),
+                    array(
+                        'key' => 'field_extension_log_player_name',
+                        'label' => 'Player Name',
+                        'name' => 'player_name',
+                        'type' => 'text',
+                        'readonly' => 1,
+                    ),
                 ),
             ),
         ),
