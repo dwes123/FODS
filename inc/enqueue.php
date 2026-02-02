@@ -94,11 +94,28 @@ function twentytwentytwo_child_enqueue_styles() {
         ));
     }
 
-    // --- NEW: Load jQuery for Rotation & Arbitration Submission Pages ---
+    // --- NEW: Load jQuery for Rotation, Arbitration, & Registration Pages ---
     if ( function_exists('get_post') ) {
         $post = get_post();
-        if ( $post && (has_shortcode( $post->post_content, 'submit_rotation' ) || has_shortcode( $post->post_content, 'arbitration_acceptance_form' )) ) {
+        if ( $post && (
+            has_shortcode( $post->post_content, 'submit_rotation' ) || 
+            has_shortcode( $post->post_content, 'arbitration_acceptance_form' ) ||
+            has_shortcode( $post->post_content, 'fod_register_form' )
+        ) ) {
             wp_enqueue_script('jquery');
+        }
+
+        // --- NEW: Depth Chart Drag-and-Drop ---
+        if ( $post && has_shortcode( $post->post_content, 'team_depth_chart' ) ) {
+            wp_enqueue_script('jquery-ui-sortable');
+            wp_enqueue_script('fod-depth-chart-js', get_stylesheet_directory_uri() . '/js/depth-chart.js', array('jquery', 'jquery-ui-sortable'), '1.0', true);
+            // Re-use faModalData since it already has the nonce/url we need
+            // or we could localize a specific one, but faModalData is convenient if already loaded.
+            // Just in case fa-modal isn't loaded on this specific page:
+            wp_localize_script('fod-depth-chart-js', 'faModalData', array(
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'roster_move_nonce' => wp_create_nonce('roster_move_nonce')
+            ));
         }
     }
 }

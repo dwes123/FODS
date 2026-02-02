@@ -63,6 +63,12 @@ require_once get_stylesheet_directory() . '/inc/team-options.php';
 // Load Mobile API Endpoints
 require_once get_stylesheet_directory() . '/inc/api-endpoints.php';
 
+// Load User Registration System
+require_once get_stylesheet_directory() . '/inc/user-registration.php';
+
+// Load ID Generator
+require_once get_stylesheet_directory() . '/inc/id-generator.php';
+
 /**
  * Register the MLB/MiLB Player Custom Post Type (playerdata)
  */

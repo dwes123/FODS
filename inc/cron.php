@@ -300,11 +300,15 @@ function process_cleared_waivers_handler() {
         } else {
             $winning_team_id = null;
             $winning_rank = -1;
+            $all_claims_audit = [];
 
             foreach ($claims as $claim) {
                 $team_id = $claim['claiming_team_id'];
                 $team_rank = $team_ranks[ $team_id ] ?? 99;
+                $all_claims_audit[] = "$team_id (Priority: #$team_rank)";
 
+                // In reverse standings, the team with the HIGHEST rank number 
+                // (e.g., Rank 30 vs Rank 1) has higher priority.
                 if ($team_rank > $winning_rank) {
                     $winning_rank = $team_rank;
                     $winning_team_id = $team_id;
@@ -316,13 +320,14 @@ function process_cleared_waivers_handler() {
                 update_post_meta($player_id, 'fa_status', 'rostered');
 
                 if ( function_exists('log_league_transaction') ) {
+                    $audit_trail = " All Claims: " . implode(', ', $all_claims_audit);
                     $log_args = [
                         'transaction_type' => 'Waiver Claim',
                         'player_ids'       => [$player_id],
                         'primary_team'     => $winning_team_id,
                         'secondary_team'   => $waiving_team_id,
                         'league_id'        => $league_id,
-                        'summary'          => esc_html($player_name) . ' was claimed off waivers by ' . esc_html($winning_team_id) . ' (Priority: #' . $winning_rank . ').',
+                        'summary'          => esc_html($player_name) . ' was claimed off waivers by ' . esc_html($winning_team_id) . ' (Priority: #' . $winning_rank . ').' . $audit_trail,
                     ];
                     log_league_transaction($log_args);
                 }

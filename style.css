@@ -806,3 +806,114 @@ h1.wp-block-post-title,
     font-size: 0.85em;
     padding: 5px 12px;
 }
+
+/* --- Depth Chart Styles --- */
+.depth-chart-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.depth-pos-pod {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.depth-pos-header {
+    background-color: var(--fod-blue-primary);
+    color: #fff;
+    padding: 10px 15px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 0.9em;
+    display: flex;
+    justify-content: space-between;
+}
+
+.depth-player-list {
+    padding: 10px;
+}
+
+.depth-player-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    border-bottom: 1px solid #eee;
+    font-size: 0.95em;
+}
+
+.depth-player-card:last-child {
+    border-bottom: none;
+}
+
+.depth-player-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.depth-player-name {
+    font-weight: bold;
+    color: var(--fod-blue-primary);
+}
+
+.depth-player-meta {
+    font-size: 0.8em;
+    color: #666;
+}
+
+.depth-player-status {
+    font-size: 0.75em;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.status-badge-26 { background: #e87426; color: #fff; }
+.status-badge-40 { background: #2e6da4; color: #fff; }
+.status-badge-minors { background: #eee; color: #666; }
+
+.depth-player-salary {
+    font-family: monospace;
+    font-weight: bold;
+    color: #444;
+}
+
+.trade-block-indicator {
+    color: #d9534f;
+    margin-left: 5px;
+    font-size: 1.1em;
+}
+
+/* --- Depth Chart Edit Mode --- */
+.depth-chart-wrapper.is-editing .depth-player-card {
+    cursor: grab;
+    background-color: #fafafa;
+    border: 1px solid #eee;
+    margin-bottom: 5px;
+    border-radius: 4px;
+}
+.depth-chart-wrapper.is-editing .depth-player-card:hover {
+    background-color: #f0f0f0;
+}
+.depth-chart-wrapper.is-editing .drag-handle {
+    display: inline-block !important;
+}
+.depth-sortable-placeholder {
+    background-color: #e6f7ff;
+    border: 2px dashed #1890ff;
+    height: 40px;
+    margin-bottom: 5px;
+    border-radius: 4px;
+}
+#depth-chart-edit-mode-btn.is-active {
+    background-color: #d9534f;
+    border-color: #d43f3a;
+    color: white;
+}

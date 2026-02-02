@@ -1134,6 +1134,39 @@
             "allow_in_bindings": 0
         },
         {
+            "key": "field_depth_rank_manual",
+            "label": "Depth Rank",
+            "name": "depth_rank",
+            "type": "number",
+            "instructions": "Manual sorting rank for the Depth Chart (1 = Top).",
+            "required": 0,
+            "default_value": 99,
+            "wrapper": {
+                "width": "25",
+                "class": "",
+                "id": ""
+            }
+        },
+        {
+            "key": "field_mlb_id",
+            "label": "MLB Player ID",
+            "name": "mlb_id",
+            "type": "text",
+            "instructions": "The unique numerical ID for this player from MLB.com. Required for real-time stat alerts.",
+            "required": 0,
+            "conditional_logic": 0,
+            "wrapper": {
+                "width": "25",
+                "class": "",
+                "id": ""
+            },
+            "default_value": "",
+            "maxlength": "",
+            "placeholder": "e.g. 592450",
+            "prepend": "",
+            "append": ""
+        },
+        {
             "key": "field_trade_block_toggle",
             "label": "On Trade Block?",
             "name": "on_trade_block",

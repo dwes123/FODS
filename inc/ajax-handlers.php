@@ -790,10 +790,33 @@ function handle_sign_isbp_free_agent_action() {
         wp_send_json_error('This player is not an International Free Agent.');
     }
 
-    // 2. Verify Balance
+    // 2. Verify Balance (including committed pending bids)
     $isbp_bal = fod_get_team_isbp_balance($league_id, $team_id);
-    if ( $bid_amt > $isbp_bal ) {
-        wp_send_json_error('Insufficient ISBP Funds. You have $' . number_format($isbp_bal));
+    
+    // Calculate committed funds on OTHER players
+    $committed_args = [
+        'post_type'      => ['playerdata', 'nbaplayer'],
+        'posts_per_page' => -1,
+        'fields'         => 'ids',
+        'post__not_in'   => [$player_id], // Exclude current player
+        'meta_query'     => [
+            'relation' => 'AND',
+            ['key' => 'league_id', 'value' => $league_id],
+            ['key' => 'fa_status', 'value' => 'pending_bid'],
+            ['key' => 'pending_bid_team_id', 'value' => $team_id],
+            ['key' => 'bid_type', 'value' => 'isbp']
+        ]
+    ];
+    $committed_query = new WP_Query($committed_args);
+    $committed_total = 0;
+    foreach ($committed_query->posts as $p_id) {
+        $committed_total += (float) get_post_meta($p_id, 'pending_bid_amount', true);
+    }
+
+    $available_bal = $isbp_bal - $committed_total;
+
+    if ( $bid_amt > $available_bal ) {
+        wp_send_json_error('Insufficient ISBP Funds. Balance: $' . number_format($isbp_bal) . '. Pending Bids: $' . number_format($committed_total) . '. Available: $' . number_format($available_bal));
     }
 
     // 3. Process Bid (Auction Logic)
@@ -801,8 +824,22 @@ function handle_sign_isbp_free_agent_action() {
     $current_bid_amt   = (float) get_field('pending_bid_amount', $player_id);
     
     if ($current_fa_status === 'pending_bid') {
-        if ($bid_amt < $current_bid_amt + 1) {
-            wp_send_json_error('Bid too low. Current high bid is $' . number_format($current_bid_amt));
+        // Rule: Must beat previous bid by DOUBLE or +$100k, whichever is LESS.
+        $double_bid = $current_bid_amt * 2;
+        $plus_100k  = $current_bid_amt + 100000;
+        
+        $min_required_bid = min($double_bid, $plus_100k);
+
+        // Exception: If bidding full available balance, only need to beat by $1.
+        $is_all_in = ($bid_amt >= $available_bal);
+
+        if ($is_all_in) {
+            if ($bid_amt <= $current_bid_amt) {
+                wp_send_json_error('Bid too low. Your "All-In" bid of $' . number_format($bid_amt) . ' must still beat the current bid of $' . number_format($current_bid_amt) . '.');
+            }
+            // Otherwise, it's allowed!
+        } elseif ($bid_amt < $min_required_bid) {
+            wp_send_json_error('Bid too low. Minimum bid is $' . number_format($min_required_bid) . ' (Double or +$100k rule). To bid less, you must go All-In with your remaining $' . number_format($available_bal) . '.');
         }
     } elseif ($current_fa_status === 'rostered' && !empty(get_field('fantasy_team_id', $player_id))) {
         wp_send_json_error('Player is already rostered.');
@@ -1287,78 +1324,98 @@ function fod_has_team_restructured_this_year($team_id, $year) {
  * AJAX: Toggle Trade Block status and update notes
  */
 function fod_update_trade_block_handler() {
+    // 1. Basic Security Checks
     check_ajax_referer('roster_move_nonce', 'nonce');
     if ( !is_user_logged_in() ) { wp_send_json_error('Not logged in.'); }
 
     $player_id = isset($_POST['player_id']) ? absint($_POST['player_id']) : 0;
-    // Explicitly cast to boolean for ACF
+    // Explicitly cast to boolean for consistency
     $on_block  = (isset($_POST['on_block']) && $_POST['on_block'] == '1');
     $notes     = isset($_POST['notes']) ? sanitize_text_field($_POST['notes']) : '';
 
     if ( !$player_id ) { wp_send_json_error('Invalid player ID.'); }
 
-    // Ownership check
+    // 2. Ownership check
     if ( !is_user_owner_of_player( get_current_user_id(), $player_id ) ) {
         wp_send_json_error('You do not have permission to manage this player.');
     }
 
-    // Update using ACF keys - this is the most reliable way to handle booleans/toggles
+    // 3. SAFE UPDATE: Use WordPress Core Meta first (Always works)
+    $meta_val_block = $on_block ? '1' : '0';
+    update_post_meta($player_id, 'on_trade_block', $meta_val_block);
+    update_post_meta($player_id, 'trade_block_notes', $notes);
+
+    // 4. ACF UPDATE: Try to sync with ACF if available
     if ( function_exists('update_field') ) {
-        update_field('field_trade_block_toggle', $on_block, $player_id);
-        if ($on_block) {
-            update_field('field_trade_block_notes', $notes, $player_id);
-            
-            // --- SLACK ANNOUNCEMENT ---
-            $player_name = get_the_title($player_id);
-            $team_id     = get_post_meta($player_id, 'fantasy_team_id', true);
-            $pos         = get_post_meta($player_id, 'position', true);
-            
-            $contract_summary = "";
-            foreach (range(2026, 2028) as $y) {
-                $val = get_post_meta($player_id, 'contract_' . $y, true);
-                if ($val) {
-                    if (is_numeric($val)) {
-                        $fmt = ($val >= 1000000) ? round($val/1000000, 1) . 'M' : round($val/1000) . 'K';
-                        $contract_summary .= "'$y: $$fmt, ";
-                    } else {
-                        $contract_summary .= "'$y: $val, ";
+        update_field('on_trade_block', $on_block, $player_id);
+        update_field('trade_block_notes', $notes, $player_id);
+    }
+
+    // 5. CACHE BUSTING
+    clean_post_cache($player_id);
+    update_option('fod_trade_block_last_updated', time());
+
+    // 6. NOTIFICATIONS (Wrapped in try/catch so it never kills the response)
+    if ($on_block) {
+        try {
+            if (function_exists('fod_send_slack_notification')) {
+                $player_name = get_the_title($player_id);
+                $team_id     = get_post_meta($player_id, 'fantasy_team_id', true);
+                $pos         = get_post_meta($player_id, 'position', true);
+                $league_id   = get_post_meta($player_id, 'league_id', true);
+                
+                $contract_summary = "";
+                foreach (range(2026, 2028) as $y) {
+                    $val = get_post_meta($player_id, 'contract_' . $y, true);
+                    if ($val) {
+                        if (is_numeric($val)) {
+                            $fmt = ($val >= 1000000) ? round($val/1000000, 1) . 'M' : round($val/1000) . 'K';
+                            $contract_summary .= "'$y: $$fmt, ";
+                        } else {
+                            $contract_summary .= "'$y: $val, ";
+                        }
                     }
                 }
-            }
-            $contract_summary = rtrim($contract_summary, ", ");
+                $contract_summary = rtrim($contract_summary, ", ");
 
-            $slack_msg = "📢 *Trade Block Alert:* _" . $player_name . "_ (" . $team_id . " - " . $pos . ") has been added to the board!\n";
-            $slack_msg .= "💰 *Contract:* " . ($contract_summary ?: "N/A") . "\n";
-            if (!empty($notes)) {
-                $slack_msg .= "📝 *Notes:* " . $notes;
-            }
+                $slack_msg = "📢 *Trade Block Alert:* _" . $player_name . "_ (" . $pos . ")\n";
+                $slack_msg .= "🏟️ *Team:* `" . $team_id . "`\n";
+                $slack_msg .= "💰 *Contract:* " . ($contract_summary ?: "N/A") . "\n";
+                if (!empty($notes)) {
+                    $slack_msg .= "📝 *Manager Notes:* " . $notes;
+                }
 
-            if (function_exists('fod_send_slack_notification')) {
-                $league_id = get_post_meta($player_id, 'league_id', true);
                 fod_send_slack_notification($slack_msg, $league_id);
             }
-            // --------------------------
+        } catch (Exception $e) {
+            error_log("Trade Block Slack Error: " . $e->getMessage());
         }
-    } else {
-        // Fallback to direct meta if ACF isn't available
-        update_post_meta($player_id, 'on_trade_block', $on_block ? '1' : '0');
-        update_post_meta($player_id, 'trade_block_notes', $notes);
     }
-
-    // --- AGGRESSIVE CACHE BUSTING ---
-    // 1. Clear the specific post cache
-    clean_post_cache($player_id);
-    
-    // 2. Clear object cache if a persistent cache (Redis/Memcached) is used
-    if ( function_exists('wp_cache_delete') ) {
-        wp_cache_delete($player_id, 'posts');
-        wp_cache_delete('on_trade_block', 'post_meta');
-    }
-
-    // 3. Update a "last modified" option to bust shortcode query caches
-    update_option('fod_trade_block_last_updated', time());
 
     $msg = $on_block ? 'Player added to trade block.' : 'Player removed from trade block.';
     wp_send_json_success(['message' => $msg]);
 }
 add_action('wp_ajax_update_trade_block', 'fod_update_trade_block_handler');
+
+/**
+ * AJAX: Save manual depth chart ordering
+ */
+function fod_save_depth_order_handler() {
+    check_ajax_referer('roster_move_nonce', 'nonce');
+    if ( !is_user_logged_in() ) wp_send_json_error('Not logged in.');
+
+    $ranks = isset($_POST['ranks']) ? $_POST['ranks'] : [];
+    if ( !is_array($ranks) ) wp_send_json_error('Invalid data.');
+
+    foreach ( $ranks as $player_id => $rank ) {
+        $player_id = absint($player_id);
+        
+        // Ownership check
+        if ( is_user_owner_of_player( get_current_user_id(), $player_id ) ) {
+            update_post_meta($player_id, 'depth_rank', absint($rank));
+        }
+    }
+
+    wp_send_json_success('Depth order saved successfully.');
+}
+add_action('wp_ajax_save_depth_order', 'fod_save_depth_order_handler');

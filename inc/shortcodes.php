@@ -176,6 +176,67 @@ function display_manager_roster_shortcode() {
     }
     echo '<div class="team-selector-ui"><strong>View Roster For:</strong> ' . implode(' | ', $links) . '</div>';
 
+    // --- NEW: Manual Team Financials Table (IFA/MiLB) ---
+    $fin_rows = get_field('manual_team_financials', 'option');
+    $team_fin = null;
+    if ( is_array($fin_rows) ) {
+        foreach ($fin_rows as $row) {
+            if ( strtoupper($row['team_id'] ?? '') === strtoupper($selected_team_id) ) {
+                $team_fin = $row;
+                break;
+            }
+        }
+    }
+
+    if ( $team_fin ) {
+        // Format numbers function
+        $fmt = function($n) { return is_numeric($n) ? number_format($n) : '0'; };
+        
+        ?>
+        <style>
+            .fin-summary-table { width: 100%; border-collapse: collapse; margin: 20px 0; border: 1px solid #ddd; font-family: sans-serif; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+            .fin-header { background-color: var(--fod-blue-primary); color: white; text-align: center; font-size: 1.3em; font-weight: bold; padding: 12px; text-transform: uppercase; letter-spacing: 1px; }
+            .fin-row { display: flex; width: 100%; }
+            .fin-col { width: 50%; display: flex; flex-direction: column; }
+            .fin-item { display: flex; border-bottom: 1px solid #eee; height: 40px; align-items: stretch; }
+            .fin-item:last-child { border-bottom: none; }
+            .fin-label { background-color: var(--fod-gray-light); color: var(--fod-blue-primary); width: 60%; padding: 5px 15px; display: flex; align-items: center; font-weight: bold; font-size: 0.85em; text-transform: uppercase; }
+            .fin-value { background-color: white; color: var(--fod-gray-dark); width: 40%; padding: 5px 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1em; border-left: 1px solid #eee; }
+            .fin-empty-box { background-color: var(--fod-gray-light); width: 100%; height: 100%; }
+        </style>
+        
+        <div class="fin-summary-table">
+            <div class="fin-header"><?php echo esc_html($selected_team_id); ?> FINANCIAL SUMMARY</div>
+            <div class="fin-row">
+                <!-- Left Column: IFA (8 Items) -->
+                <div class="fin-col" style="border-right: 1px solid #eee;">
+                    <div class="fin-item"><div class="fin-label">IFA Allotment</div><div class="fin-value"><?php echo $fmt($team_fin['ifa_allotment']); ?></div></div>
+                    <div class="fin-item"><div class="fin-label">IFA Deductions</div><div class="fin-value"><?php echo $fmt($team_fin['ifa_deductions']); ?></div></div>
+                    <div class="fin-item"><div class="fin-label">IFA Max Trade Acquisition</div><div class="fin-value"><?php echo $fmt($team_fin['ifa_max_trade_acquisition']); ?></div></div>
+                    <div class="fin-item"><div class="fin-label">IFA Traded Away</div><div class="fin-value"><?php echo $fmt($team_fin['ifa_traded_away']); ?></div></div>
+                    <div class="fin-item"><div class="fin-label">IFA Traded For</div><div class="fin-value"><?php echo $fmt($team_fin['ifa_traded_for']); ?></div></div>
+                    <div class="fin-item"><div class="fin-label">IFA Spent</div><div class="fin-value"><?php echo $fmt($team_fin['ifa_spent']); ?></div></div>
+                    <div class="fin-item"><div class="fin-label">Signings</div><div class="fin-value"><?php echo $fmt($team_fin['ifa_signings']); ?></div></div>
+                    <div class="fin-item" style="border-bottom:none; background-color: #f0f7ff;"><div class="fin-label" style="background-color: transparent;">IFA Remaining</div><div class="fin-value" style="background-color: transparent; color: var(--fod-orange-accent);"><?php echo $fmt($team_fin['ifa_remaining']); ?></div></div>
+                </div>
+                
+                <!-- Right Column: MiLB (8 Items - matching heights) -->
+                <div class="fin-col">
+                    <div class="fin-item"><div class="fin-label">MiLB Allotment</div><div class="fin-value"><?php echo $fmt($team_fin['milb_allotment']); ?></div></div>
+                    <div class="fin-item"><div class="fin-label">Rule V Picks</div><div class="fin-value"><?php echo $fmt($team_fin['rule_v_picks']); ?></div></div>
+                    <div class="fin-item"><div class="fin-label">Purchased</div><div class="fin-value"><?php echo $fmt($team_fin['purchased']); ?></div></div>
+                    <div class="fin-item"><div class="fin-label">MiLB Spent</div><div class="fin-value"><?php echo $fmt($team_fin['milb_spent']); ?></div></div>
+                    <div class="fin-item"><div class="fin-label">Signings</div><div class="fin-value"><?php echo $fmt($team_fin['milb_signings']); ?></div></div>
+                    <div class="fin-item" style="background-color: #f0f7ff;"><div class="fin-label" style="background-color: transparent;">MiLB Remaining</div><div class="fin-value" style="background-color: transparent; color: var(--fod-orange-accent);"><?php echo $fmt($team_fin['milb_remaining']); ?></div></div>
+                    <!-- Empty rows to match the 8 rows on the left -->
+                    <div class="fin-item" style="background-color: var(--fod-gray-light); flex-grow: 1; border-bottom: 1px solid #eee;"></div>
+                    <div class="fin-item" style="border-bottom:none; background-color: var(--fod-gray-light); flex-grow: 1;"></div>
+                </div>
+            </div>
+        </div>
+        <?php
+    }
+
     // 26-Man Filter Links
     $base_url = get_permalink();
     $url_params = [ 'l_id' => $selected_league_id, 't_id' => $selected_team_id ];
@@ -1348,6 +1409,260 @@ add_shortcode( 'league_trade_block', 'display_league_trade_block_shortcode' );
 
 
 /* ------------------------------------------------------------------------
+   [team_depth_chart] — Visual Lineup/Depth Chart View
+------------------------------------------------------------------------ */
+function display_team_depth_chart_shortcode() {
+    if ( ! is_user_logged_in() ) { return '<p>Please log in to view depth charts.</p>'; }
+    
+    global $wpdb;
+    $current_user_id = get_current_user_id();
+    $current_year = date('Y');
+
+    // 1. Get User's Managed Teams
+    $managed_teams = get_field('managed_teams', 'user_' . $current_user_id) ?: [];
+    
+    // 2. Determine Selected League/Team
+    // Standardize logic with other shortcodes
+    $all_leagues = $wpdb->get_col("SELECT DISTINCT meta_value FROM {$wpdb->postmeta} WHERE meta_key = 'league_id' AND meta_value != '' ORDER BY meta_value ASC");
+    
+    $selected_league = $all_leagues[0] ?? 'MLB';
+    if ( isset($_GET['dc_league']) ) {
+        $req = sanitize_text_field($_GET['dc_league']);
+        if (in_array($req, $all_leagues)) $selected_league = $req;
+    }
+
+    // Get teams for this league
+    $all_teams = $wpdb->get_col($wpdb->prepare(
+        "SELECT DISTINCT pm_team.meta_value FROM {$wpdb->postmeta} pm_team
+         INNER JOIN {$wpdb->postmeta} pm_league ON pm_team.post_id = pm_league.post_id
+         WHERE pm_league.meta_key = 'league_id' AND pm_league.meta_value = %s
+         AND pm_team.meta_key = 'fantasy_team_id' AND pm_team.meta_value != ''
+         ORDER BY pm_team.meta_value ASC",
+        $selected_league
+    ));
+
+    if (empty($all_teams)) return '<p>No teams found for this league.</p>';
+
+    // Default to user's team if they have one in this league
+    $default_team = $all_teams[0];
+    foreach($managed_teams as $mt) {
+        if (($mt['league_id']??'') === $selected_league) {
+            $default_team = $mt['fantasy_team_id'];
+            break;
+        }
+    }
+
+    $selected_team = isset($_GET['dc_team']) ? sanitize_text_field($_GET['dc_team']) : $default_team;
+    if (!in_array($selected_team, $all_teams)) $selected_team = $default_team;
+
+    // 3. Query Players
+    $args = [
+        'post_type'      => 'playerdata',
+        'posts_per_page' => -1,
+        'meta_query'     => [
+            'relation' => 'AND',
+            ['key' => 'league_id', 'value' => $selected_league],
+            ['key' => 'fantasy_team_id', 'value' => $selected_team],
+            ['relation' => 'OR', ['key'=>'fa_status','value'=>'rostered'], ['key'=>'fa_status','compare'=>'NOT EXISTS']],
+            [
+                'relation' => 'OR',
+                ['key' => 'status_26_man', 'value' => '1', 'compare' => '='],
+                ['key' => 'status_40_man', 'value' => 'X', 'compare' => '=']
+            ]
+        ]
+    ];
+    $query = new WP_Query($args);
+
+    // 4. Organize into Position Pods
+    // Baseball Order: Rotation, Bullpen, C, 1B, 2B, 3B, SS, OF, DH/UT
+    $pods = [
+        'SP' => [], 'RP' => [], 'C' => [], '1B' => [], '2B' => [], 
+        '3B' => [], 'SS' => [], 'OF' => [], 'DH' => []
+    ];
+
+    while ( $query->have_posts() ) {
+        $query->the_post();
+        $pid = get_the_ID();
+        $pos = strtoupper(get_post_meta($pid, 'position', true));
+        
+        // Normalize positions
+        if (strpos($pos, 'P') !== false) {
+            $pos = (strpos($pos, 'SP') !== false) ? 'SP' : 'RP';
+        } elseif (strpos($pos, 'OF') !== false || strpos($pos, 'LF') !== false || strpos($pos, 'CF') !== false || strpos($pos, 'RF') !== false) {
+            $pos = 'OF';
+        }
+        
+        if (!isset($pods[$pos])) $pos = 'DH';
+
+        $is_26 = get_post_meta($pid, 'status_26_man', true) == '1';
+        $is_40 = get_post_meta($pid, 'status_40_man', true) === 'X';
+        $on_block = get_post_meta($pid, 'on_trade_block', true) === '1';
+        
+        // Get full contract details (2026-2040)
+        $full_contract = [];
+        foreach(range(2026, 2040) as $y) {
+            $val = get_post_meta($pid, 'contract_' . $y, true);
+            if ($val) {
+                if (is_numeric($val)) {
+                    $fmt = ($val >= 1000000) ? round($val/1000000, 1) . 'M' : round($val/1000) . 'K';
+                    $full_contract[] = "'" . substr($y, -2) . ": $" . $fmt;
+                } else {
+                    $full_contract[] = "'" . substr($y, -2) . ": " . $val;
+                }
+            }
+        }
+
+        $pods[$pos][] = [
+            'id'   => $pid,
+            'name' => get_the_title(),
+            'is_26' => $is_26,
+            'is_40' => $is_40,
+            'contract_summary' => implode(' | ', $full_contract),
+            'on_block' => $on_block,
+            'salary' => get_post_meta($pid, 'contract_' . $current_year, true), // Used for sorting
+            'status_score' => ($is_26 ? 3 : ($is_40 ? 2 : 1)),
+            'manual_rank'  => (int) get_post_meta( $pid, 'depth_rank', true )
+        ];
+    }
+    wp_reset_postdata();
+
+    // Sort each pod by Manual Rank (ASC) then Status Score (DESC) then Salary (DESC)
+    foreach ( $pods as $key => &$players ) {
+        usort( $players, function( $a, $b ) {
+            // 1. Manual Rank (Low is better, e.g. 1st string)
+            // Treat 0 or empty as "Max Int" for sorting purposes so they go to bottom
+            $rankA = ( $a['manual_rank'] > 0 ) ? $a['manual_rank'] : 999999;
+            $rankB = ( $b['manual_rank'] > 0 ) ? $b['manual_rank'] : 999999;
+
+            if ( $rankA !== $rankB ) {
+                return $rankA <=> $rankB;
+            }
+
+            // 2. Roster Status Score (High is better: 3=26man, 2=40man, 1=MiLB)
+            if ( $a['status_score'] !== $b['status_score'] ) {
+                return $b['status_score'] <=> $a['status_score'];
+            }
+
+            // 3. Salary (High is better)
+            $salA = is_numeric( $a['salary'] ) ? (float) $a['salary'] : 0;
+            $salB = is_numeric( $b['salary'] ) ? (float) $b['salary'] : 0;
+            return $salB <=> $salA;
+        });
+    }
+
+    ob_start();
+    
+    // Check if current user manages the selected team (or is admin)
+    $can_edit = current_user_can('manage_options');
+    if (!$can_edit) {
+        $user_teams = get_field('managed_teams', 'user_' . get_current_user_id());
+        if ($user_teams) {
+            foreach($user_teams as $mt) {
+                if (($mt['fantasy_team_id']??'') === $selected_team && ($mt['league_id']??'') === $selected_league) {
+                    $can_edit = true; 
+                    break;
+                }
+            }
+        }
+    }
+    ?>
+    <div class="depth-chart-wrapper">
+        <div class="depth-chart-controls" style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+            <div class="selectors">
+                <div class="league-selector-ui" style="margin-bottom: 5px;">
+                    <strong>League:</strong> 
+                    <?php foreach($all_leagues as $lid): 
+                        $url = add_query_arg(['dc_league' => $lid, 'dc_team' => false]);
+                        $cls = ($lid === $selected_league) ? 'class="is-selected"' : '';
+                        echo "<a href='$url' $cls>$lid</a> | ";
+                    endforeach; ?>
+                </div>
+
+                <div class="team-selector-ui">
+                    <strong>Team:</strong> 
+                    <select onchange="window.location.href=this.value">
+                        <?php foreach($all_teams as $tid): 
+                            $url = add_query_arg(['dc_league' => $selected_league, 'dc_team' => $tid]);
+                            $sel = ($tid === $selected_team) ? 'selected' : '';
+                            echo "<option value='$url' $sel>$tid</option>";
+                        endforeach; ?>
+                    </select>
+                </div>
+            </div>
+
+            <?php if ($can_edit): ?>
+                <div class="edit-controls">
+                    <button id="depth-chart-edit-mode-btn" class="button">Edit Depth Chart</button>
+                    <button id="depth-chart-save-btn" class="button button-primary" style="display:none;">Save Changes</button>
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <h2>Depth Chart: <?php echo esc_html($selected_team); ?></h2>
+
+        <div class="depth-chart-grid">
+            <?php foreach($pods as $pos_label => $players): ?>
+                <div class="depth-pos-pod">
+                    <div class="depth-pos-header">
+                        <span><?php echo $pos_label; ?></span>
+                        <span style="opacity:0.7; font-size:0.8em;"><?php echo count($players); ?></span>
+                    </div>
+                    <div class="depth-player-list">
+                        <?php if (empty($players)): ?>
+                            <div style="padding:10px; color:#999; font-style:italic; font-size:0.85em;">No players</div>
+                        <?php else: foreach($players as $p): 
+                            $status_cls = $p['is_26'] ? 'status-badge-26' : ($p['is_40'] ? 'status-badge-40' : 'status-badge-minors');
+                            $status_txt = $p['is_26'] ? '26' : ($p['is_40'] ? '40' : 'MiLB');
+                            
+                            // Get raw ID from somewhere? The loop above didn't save ID in $p array, let's look back...
+                            // Ah, I need to add 'id' => $pid to the $pods construction loop first.
+                            // WAIT: I can't just access it here if it's not in the array. 
+                            // I will have to assume I added it or fix the array construction in the previous logic.
+                            // Let's check the previous context in the file...
+                            // The context provided earlier shows: $pods[$pos][] = [ 'name' => ..., 'rank' => ... ]
+                            // It does NOT include 'id'. I MUST ADD IT via a separate replacement first or combined.
+                            // Since I am replacing this block, I will assume $p['id'] is available 
+                            // BUT I need to ensure the data construction upstream includes it.
+                            // Actually, let me verify the upstream code.
+                             
+                            $sal_fmt = '–';
+                            if ($p['salary']) {
+                                if (is_numeric($p['salary'])) {
+                                    $v = (float)$p['salary'];
+                                    $sal_fmt = ($v >= 1000000) ? '$' . round($v/1000000, 1) . 'M' : '$' . round($v/1000) . 'K';
+                                } else {
+                                    $sal_fmt = $p['salary'];
+                                }
+                            }
+                        ?>
+                            <div class="depth-player-card" data-player-id="<?php echo esc_attr($p['id']); ?>">
+                                <div class="depth-player-info">
+                                    <div class="depth-player-name">
+                                        <span class="drag-handle" style="display:none; cursor:grab; margin-right:5px; color:#ccc;">☰</span>
+                                        <?php echo esc_html($p['name']); ?>
+                                        <?php if($p['on_block']) echo '<span class="trade-block-indicator" title="On Trade Block">🚨</span>'; ?>
+                                    </div>
+                                    <div class="depth-player-meta">
+                                        <span class="depth-player-status <?php echo $status_cls; ?>"><?php echo $status_txt; ?></span>
+                                        <span class="depth-contract-summary" style="font-size: 0.85em; font-family: monospace; color: #444; margin-left: 5px;">
+                                            <?php echo esc_html($p['contract_summary'] ?: '–'); ?>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; endif; ?>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php
+    return ob_get_clean();
+}
+add_shortcode( 'team_depth_chart', 'display_team_depth_chart_shortcode' );
+
+
+/* ------------------------------------------------------------------------
    Free Agents – List, Modal, and Bidding
 ------------------------------------------------------------------------ */
 function display_fa_sign_notices() {
@@ -1473,7 +1788,15 @@ function display_free_agent_list_shortcode($atts) {
             $time_display = '–';
 
             if ($fa_status === 'pending_bid' && !empty($bid_amount)) {
-                $bid_display = number_format(floatval($bid_amount), 2) . ' pts';
+                $is_ifa = get_field('is_international_free_agent', $player_id);
+                $bid_type = get_post_meta($player_id, 'bid_type', true);
+                
+                if ($is_ifa || $bid_type === 'isbp' || $bid_type === 'milb') {
+                    $bid_display = '$' . number_format(floatval($bid_amount), 0);
+                } else {
+                    $bid_display = number_format(floatval($bid_amount), 2) . ' pts';
+                }
+                
                 $end_timestamp = strtotime($end_time_str);
                 if ($end_timestamp > current_time('timestamp')) {
                     $time_display = human_time_diff(current_time('timestamp'), $end_timestamp) . ' left';
@@ -1807,6 +2130,64 @@ function display_waiver_wire_spotlight_shortcode() {
 add_shortcode('waiver_wire_spotlight', 'display_waiver_wire_spotlight_shortcode');
 
 
+/**
+ * [commissioner_waiver_audit]
+ * Displays a master list of all pending waiver claims for all players.
+ * For Commissioner verification purposes.
+ */
+function display_commissioner_waiver_audit_shortcode() {
+    if ( ! current_user_can('manage_options') ) {
+        return '<p>Access Denied. Commissioners only.</p>';
+    }
+
+    $args = [
+        'post_type'      => 'playerdata',
+        'posts_per_page' => -1,
+        'meta_query'     => [
+            ['key' => 'fa_status', 'value' => 'on waivers']
+        ]
+    ];
+
+    $query = new WP_Query($args);
+    
+    ob_start();
+    echo '<div class="waiver-audit-wrapper">';
+    echo '<h3>Pending Waiver Claims (Master List)</h3>';
+
+    if ( $query->have_posts() ) {
+        echo '<table class="fantasy-table-base">';
+        echo '<thead><tr><th>Player</th><th>Waiving Team</th><th>Time Left</th><th>Claiming Teams</th></tr></thead>';
+        echo '<tbody>';
+        while ( $query->have_posts() ) {
+            $query->the_post();
+            $pid = get_the_ID();
+            $claims = get_field('pending_waiver_claims', $pid) ?: [];
+            $end_time = get_field('waiver_end_time', $pid);
+            
+            $claiming_teams = [];
+            foreach ($claims as $c) {
+                $claiming_teams[] = '<strong>' . esc_html($c['claiming_team_id']) . '</strong>';
+            }
+
+            echo '<tr>';
+            echo '<td>' . get_the_title() . ' (' . get_post_meta($pid, 'league_id', true) . ')</td>';
+            echo '<td>' . esc_html(get_post_meta($pid, 'waiving_team_id', true) ?: '–') . '</td>';
+            echo '<td>' . ($end_time ? human_time_diff(current_time('timestamp'), strtotime($end_time)) . ' left' : 'Processing...') . '</td>';
+            echo '<td>' . (!empty($claiming_teams) ? implode(', ', $claiming_teams) : '<span style="color:#999;">No claims</span>') . '</td>';
+            echo '</tr>';
+        }
+        echo '</tbody></table>';
+    } else {
+        echo '<p>No players are currently on waivers.</p>';
+    }
+    echo '</div>';
+    wp_reset_postdata();
+
+    return ob_get_clean();
+}
+add_shortcode('commissioner_waiver_audit', 'display_commissioner_waiver_audit_shortcode');
+
+
 /* ------------------------------------------------------------------------
    [fantrax_standings] — Fetches and displays Fantrax standings
 ------------------------------------------------------------------------ */
@@ -1925,7 +2306,17 @@ function league_members_only_shortcode( $atts, $content = null ) {
         ob_start();
         wp_login_form( [ 'remember' => true, 'label_username' => __( 'Email or Username' ) ] );
         $login_form = ob_get_clean();
-        $login_column = '<div class="login-form-widget">' . $login_form . '</div>';
+        
+        $reg_page_id = get_field('registration_page', 'option');
+        $reg_link = '';
+        if ($reg_page_id) {
+            $reg_link = '<div style="margin-top: 20px; text-align: center; border-top: 1px solid #eee; padding-top: 20px;">
+                            <p style="margin-bottom: 10px;">New Manager?</p>
+                            <a href="' . esc_url(get_permalink($reg_page_id)) . '" class="button button-primary" style="width: 100%; display: block; background-color: #2E6DA4; border-color: #2E6DA4;">Request a Manager Account</a>
+                         </div>';
+        }
+
+        $login_column = '<div class="login-form-widget">' . $login_form . $reg_link . '</div>';
         return '<div class="public-login-page-wrapper">' . $info_column . $login_column . '</div>';
     }
 }
@@ -2109,11 +2500,17 @@ function display_fa_bid_calculator_shortcode() {
     
                 // Get full bid history
                 $bid_history = get_field('bid_history', $player_id);
+                $is_ifa = get_field('is_international_free_agent', $player_id);
+                $bid_type = get_post_meta($player_id, 'bid_type', true);
+                $is_cash_bid = ($is_ifa || $bid_type === 'isbp' || $bid_type === 'milb');
     
                 echo '<li class="bidding-player-item">';
                 echo '<h4>' . esc_html($player_name) . '</h4>';
                 echo '<div class="bidding-summary">';
-                echo '<strong>High Bid:</strong> ' . esc_html(number_format(floatval($top_bid_amount), 2)) . ' pts<br>';
+                
+                $high_bid_display = $is_cash_bid ? '$' . number_format(floatval($top_bid_amount), 0) : number_format(floatval($top_bid_amount), 2) . ' pts';
+                echo '<strong>High Bid:</strong> ' . esc_html($high_bid_display) . '<br>';
+                
                 if ($top_bid_aav) {
                     echo '<strong>AAV:</strong> $' . esc_html(number_format(floatval($top_bid_aav))) . '<br>';
                 }
@@ -2135,9 +2532,12 @@ function display_fa_bid_calculator_shortcode() {
                     echo '<thead><tr><th>Team</th><th>Bid Amount</th><th>Years</th><th>AAV</th></tr></thead>';
                     echo '<tbody>';
                     foreach ($bid_history as $bid) {
+                        $bid_amt_val = floatval($bid['history_bid_amount'] ?? 0);
+                        $bid_amt_display = $is_cash_bid ? '$' . number_format($bid_amt_val, 0) : number_format($bid_amt_val, 2) . ' pts';
+                        
                         echo '<tr>';
                         echo '<td>' . esc_html($bid['history_team_id'] ?? '') . '</td>';
-                        echo '<td>' . esc_html(number_format(floatval($bid['history_bid_amount'] ?? 0), 2)) . ' pts</td>';
+                        echo '<td>' . esc_html($bid_amt_display) . '</td>';
                         echo '<td>' . esc_html($bid['history_bid_years'] ?? '') . '</td>';
                         echo '<td>$' . esc_html(number_format(floatval($bid['history_bid_aav'] ?? 0))) . '</td>';
                         echo '</tr>';
@@ -2147,7 +2547,14 @@ function display_fa_bid_calculator_shortcode() {
                     echo '<p style="margin-top: 10px;"><em>No bid history found for this player. This may be the initial bid.</em></p>';
                 }
                 if ($manager_team_id_for_league) {
-                    echo '<button type="button" class="button fa-offer-button" data-playerid="' . esc_attr($player_id) . '" data-playername="' . esc_attr($player_name) . '" data-leagueid="' . esc_attr($selected_league_id) . '" data-teamid="' . esc_attr($manager_team_id_for_league) . '" style="margin-top: 10px;">Place New Bid</button>';
+                    $is_ifa = get_field('is_international_free_agent', $player_id);
+                    if ( $is_ifa ) {
+                        // International Free Agent: Show ISBP Bid Button
+                        echo '<button type="button" class="button fa-isbp-offer-button" data-playerid="' . esc_attr($player_id) . '" data-playername="' . esc_attr($player_name) . '" data-leagueid="' . esc_attr($selected_league_id) . '" data-teamid="' . esc_attr($manager_team_id_for_league) . '" style="margin-top: 10px; background-color: #28a745; border-color: #28a745; color: white;">Place ISBP Bid</button>';
+                    } else {
+                        // Standard Bid Button
+                        echo '<button type="button" class="button fa-offer-button" data-playerid="' . esc_attr($player_id) . '" data-playername="' . esc_attr($player_name) . '" data-leagueid="' . esc_attr($selected_league_id) . '" data-teamid="' . esc_attr($manager_team_id_for_league) . '" style="margin-top: 10px;">Place New Bid</button>';
+                    }
                 }
                 echo '</li>';
             }
@@ -2176,12 +2583,13 @@ function display_fa_bid_calculator_shortcode() {
     add_shortcode('fa_bidding_history', 'display_fa_bidding_history_shortcode');
     
     /**
-     * Renders the Free Agent Bid Modal.
+     * Renders the Free Agent Bid Modal (Standard, MiLB, and ISBP).
      */
     function fod_render_fa_bid_modal() {
         $multipliers = [ 1 => 2.0, 2 => 1.8, 3 => 1.6, 4 => 1.4, 5 => 1.2, 6 => 1.0, 7 => 0.8, 8 => 0.6 ];
         ob_start();
         ?>
+        <!-- Standard Bid Modal -->
         <div id="fa-offer-modal" class="fantasy-modal fa-modal-hidden">
             <div class="fa-modal-content">
                 <span class="fa-modal-close"></span>
@@ -2218,6 +2626,70 @@ function display_fa_bid_calculator_shortcode() {
                 </form>
             </div>
         </div>
+
+        <!-- MiLB Offer Modal -->
+        <div id="fa-milb-modal" class="fantasy-modal fa-modal-hidden">
+            <div class="fa-modal-content">
+                <span class="fa-modal-close"></span>
+                <h3>Offer Minor League Contract</h3>
+                <div id="milb-modal-message"></div>
+                <p><strong>Player:</strong> <span id="milb-player-name"></span></p>
+                <form id="fa-milb-form">
+                    <input type="hidden" id="milb-player-id" name="player_id">
+                    <input type="hidden" id="milb-league-id" name="league_id">
+                    <input type="hidden" id="milb-team-id" name="team_id">
+                    
+                    <div style="margin-bottom: 15px; border: 1px solid #ddd; padding: 10px; background: #f9f9f9;">
+                        <label><strong>Step 1: Verify Eligibility</strong></label><br>
+                        <small>Player must have <= 30 IP OR <= 150 ABs.</small>
+                        <div style="margin-top: 5px;">
+                            <select id="milb-stat-type" style="width: 100px;">
+                                <option value="IP">IP</option>
+                                <option value="AB">ABs</option>
+                            </select>
+                            <input type="number" id="milb-stat-value" placeholder="Value" style="width: 100px;" min="0" step="0.1">
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <label><strong>Step 2: Offer Amount ($)</strong></label><br>
+                        <input type="number" id="milb-bid-amount" name="bid_amount" style="width: 100%;" min="1" required>
+                        <small id="milb-balance-display">Loading Balance...</small>
+                    </div>
+
+                    <hr>
+                    <button type="submit" id="milb-submit-btn" class="button button-primary">Submit Offer</button>
+                    <button type="button" class="button button-secondary fa-modal-cancel">Cancel</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- ISBP Offer Modal -->
+        <div id="fa-isbp-modal" class="fantasy-modal fa-modal-hidden">
+            <div class="fa-modal-content">
+                <span class="fa-modal-close"></span>
+                <h3>International Free Agent Bid</h3>
+                <div id="isbp-modal-message"></div>
+                <p><strong>Player:</strong> <span id="isbp-player-name"></span></p>
+                <p>This player is an International Free Agent. You must bid using your International Slot Bonus Pool (ISBP) funds.</p>
+                
+                <form id="fa-isbp-form">
+                    <input type="hidden" id="isbp-player-id" name="player_id">
+                    <input type="hidden" id="isbp-league-id" name="league_id">
+                    <input type="hidden" id="isbp-team-id" name="team_id">
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label><strong>Bid Amount ($)</strong></label><br>
+                        <input type="number" id="isbp-bid-amount" name="bid_amount" style="width: 100%;" min="1" required>
+                        <small id="isbp-balance-display" style="color:#28a745; font-weight:bold;">Loading Balance...</small>
+                    </div>
+
+                    <hr>
+                    <button type="submit" id="isbp-submit-btn" class="button button-primary" style="background-color: #28a745; border-color: #28a745;">Submit ISBP Bid</button>
+                    <button type="button" class="button button-secondary fa-modal-cancel">Cancel</button>
+                </form>
+            </div>
+        </div>
         <?php
         return ob_get_clean();
     }
@@ -2244,18 +2716,34 @@ function display_all_transactions_shortcode() {
         $selected_league_id = sanitize_text_field( wp_unslash( $_GET['show_league'] ) );
     }
 
+    // --- NEW: Robust Team Filter Logic ---
+    // Get ALL unique teams that exist in this league (from player data)
+    // This ensures teams appear even if they haven't made a transaction yet.
+    $teams_in_league = $wpdb->get_col( $wpdb->prepare(
+        "SELECT DISTINCT pm_team.meta_value 
+         FROM {$wpdb->postmeta} pm_team
+         INNER JOIN {$wpdb->postmeta} pm_league ON pm_team.post_id = pm_league.post_id
+         INNER JOIN {$wpdb->posts} p ON pm_team.post_id = p.ID
+         WHERE pm_league.meta_key = 'league_id' 
+           AND pm_league.meta_value = %s
+           AND pm_team.meta_key = 'fantasy_team_id' 
+           AND pm_team.meta_value != ''
+           AND p.post_status = 'publish'
+         ORDER BY pm_team.meta_value ASC",
+        $selected_league_id
+    ) );
+
+    $selected_team_filter = isset($_GET['team_filter']) ? sanitize_text_field($_GET['team_filter']) : '';
+    
     $paged = ( get_query_var( 'paged' ) ) ? get_query_var( 'paged' ) : 1;
     
-    $meta_query = [
-        'relation' => 'AND',
-        [
-            'relation' => 'OR',
-            [ 'key' => 'transaction_type', 'value' => 'Trade', 'compare' => '=' ],
-            [ 'key' => 'transaction_type', 'value' => 'Free Agent Signing', 'compare' => '=' ],
-            [ 'key' => 'transaction_type', 'value' => 'Waiver Claim', 'compare' => '=' ],
-            [ 'key' => 'transaction_type', 'value' => 'Draft Pick', 'compare' => '=' ],
-            [ 'key' => 'transaction_type', 'value' => 'Team Option', 'compare' => '=' ],
-        ]
+    $meta_query = ['relation' => 'AND'];
+
+    // Basic filter to exclude minor roster moves
+    $meta_query[] = [
+        'key'     => 'transaction_type',
+        'value'   => ['Trade', 'Free Agent Signing', 'Waiver Claim', 'Draft Pick', 'Team Option'],
+        'compare' => 'IN'
     ];
 
     if ( ! empty( $selected_league_id ) ) {
@@ -2263,6 +2751,15 @@ function display_all_transactions_shortcode() {
             'key'     => 'league_id',
             'value'   => $selected_league_id,
             'compare' => '=',
+        ];
+    }
+
+    // Apply Team Filter
+    if ( ! empty( $selected_team_filter ) ) {
+        $meta_query[] = [
+            'relation' => 'OR',
+            ['key' => 'primary_team', 'value' => $selected_team_filter, 'compare' => '='],
+            ['key' => 'secondary_team', 'value' => $selected_team_filter, 'compare' => '=']
         ];
     }
 
@@ -2285,10 +2782,31 @@ function display_all_transactions_shortcode() {
         $links = [];
         $base_url = get_permalink();
         foreach ( $all_leagues as $lid ) {
-            $url = add_query_arg( 'show_league', rawurlencode( $lid ), $base_url );
+            $url = add_query_arg( [ 'show_league' => rawurlencode( $lid ), 'team_filter' => false ], $base_url );
             $links[] = '<a href="' . esc_url( $url ) . '"' . ( $lid === $selected_league_id ? ' class="is-selected"' : '' ) . '>' . esc_html( $lid ) . '</a>';
         }
         echo implode( ' | ', $links );
+        echo '</div>';
+    }
+
+    // --- NEW: Team Filter UI ---
+    if ( !empty($teams_in_league) ) {
+        echo '<div class="team-selector-ui" style="margin-bottom: 20px;">';
+        echo '<strong>Filter By Team:</strong> ';
+        $team_links = [];
+        $base_url = get_permalink();
+        
+        // "All Teams" link
+        $all_url = add_query_arg(['show_league' => $selected_league_id, 'team_filter' => false], $base_url);
+        $all_sel = empty($selected_team_filter) ? ' class="is-selected"' : '';
+        $team_links[] = "<a href='" . esc_url($all_url) . "' $all_sel>All Teams</a>";
+
+        foreach ($teams_in_league as $tid) {
+            $t_url = add_query_arg(['show_league' => $selected_league_id, 'team_filter' => rawurlencode($tid)], $base_url);
+            $t_sel = ($tid === $selected_team_filter) ? ' class="is-selected"' : '';
+            $team_links[] = "<a href='" . esc_url($t_url) . "' $t_sel>" . esc_html($tid) . "</a>";
+        }
+        echo implode(' | ', $team_links);
         echo '</div>';
     }
 

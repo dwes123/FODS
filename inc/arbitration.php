@@ -174,7 +174,7 @@ function fod_display_arbitration_form_shortcode($atts) {
                                             <button type="button" class="button button-secondary toggle-extension-btn" data-playerid="<?php echo $player['id']; ?>">Agreed to Extension</button>
                                             <div id="extension-fields-<?php echo $player['id']; ?>" class="extension-fields" style="display:none; margin-top:10px; background:#f9f9f9; padding:10px; border:1px solid #ddd;">
                                                 <strong>Multi-Year Contract:</strong><br>
-                                                <?php for($y = (int)$target_year; $y <= (int)$target_year + 5; $y++): ?>
+                                                <?php for($y = (int)$target_year; $y <= 2040; $y++): ?>
                                                     <div style="margin-bottom:5px;">
                                                         <label style="font-size:12px;"><?php echo $y; ?>: </label>
                                                         <input type="number" name="players[<?php echo $player['id']; ?>][multi][<?php echo $y; ?>]" placeholder="Amount" style="width:100px;">

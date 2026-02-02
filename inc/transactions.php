@@ -146,39 +146,44 @@ function fod_handle_fantrax_toggle() {
 add_action('admin_post_toggle_fantrax_processed', 'fod_handle_fantrax_toggle');
 
 /**
- * Helper to send messages to a Slack channel via Webhook.
- * Now routes to the correct channel based on League ID.
+ * Helper to send messages to a Slack channel via Web API.
+ * Supports unique Bot Tokens and Channels per League (Multi-Workspace).
  */
 function fod_send_slack_notification($message, $league_id = '') {
-    $webhooks = get_field('league_slack_webhooks', 'option');
-    $webhook_url = '';
+    $configs = get_field('league_slack_channels', 'option');
+    
+    if (!is_array($configs)) {
+        return;
+    }
 
-    if ( is_array($webhooks) ) {
-        foreach ( $webhooks as $row ) {
-            if ( strtoupper($row['league_id'] ?? '') === strtoupper($league_id) ) {
-                $webhook_url = $row['webhook_url'];
-                break;
-            }
+    $bot_token  = '';
+    $channel_id = '';
+
+    foreach ( $configs as $row ) {
+        if ( strtoupper($row['league_id'] ?? '') === strtoupper($league_id) ) {
+            $bot_token  = $row['bot_token'] ?? '';
+            $channel_id = $row['channel_id'] ?? '';
+            break;
         }
     }
 
-    // If no league match found, do not send (or could fallback to a general channel if defined)
-    if (empty($webhook_url)) {
+    if (empty($bot_token) || empty($channel_id)) {
         return;
     }
 
     $payload = [
-        'text' => $message
+        'channel' => $channel_id,
+        'text'    => $message
     ];
 
-    wp_remote_post($webhook_url, [
+    wp_remote_post('https://slack.com/api/chat.postMessage', [
         'method'      => 'POST',
         'timeout'     => 15,
-        'redirection' => 5,
-        'httpversion' => '1.0',
-        'blocking'    => true,
-        'headers'     => ['Content-Type' => 'application/json'],
+        'headers'     => [
+            'Content-Type'  => 'application/json; charset=utf-8',
+            'Authorization' => 'Bearer ' . $bot_token
+        ],
         'body'        => json_encode($payload),
-        'cookies'     => []
+        'blocking'    => true
     ]);
 }

@@ -22,6 +22,15 @@ function fod_register_commissioner_tools_menu() {
         'fod-arb-approvals',
         'fod_render_arb_approval_page'
     );
+
+    add_submenu_page(
+        'commissioner-tools',
+        'Account Approvals',
+        'Account Approvals',
+        'manage_options',
+        'fod-account-approvals',
+        'fod_render_account_approval_page'
+    );
 }
 add_action('admin_menu', 'fod_register_commissioner_tools_menu');
 
@@ -111,3 +120,69 @@ function fod_render_commish_tools_dashboard() {
     </div>
     <?php
 }
+
+/* ------------------------------------------------------------------------
+   Player Data List: Add FOD ID Column
+------------------------------------------------------------------------ */
+function fod_set_player_columns($columns) {
+    $new_columns = [];
+    foreach($columns as $key => $value) {
+        if ($key === 'title') {
+            $new_columns['fod_id'] = 'FOD ID';
+        }
+        $new_columns[$key] = $value;
+    }
+    return $new_columns;
+}
+add_filter('manage_playerdata_posts_columns', 'fod_set_player_columns');
+add_filter('manage_nbaplayer_posts_columns', 'fod_set_player_columns');
+
+function fod_populate_player_columns($column, $post_id) {
+    if ($column === 'fod_id') {
+        $fod_id = get_post_meta($post_id, 'fod_id', true);
+        echo '<strong>' . esc_html($fod_id ?: '–') . '</strong>';
+    }
+}
+add_action('manage_playerdata_posts_custom_column', 'fod_populate_player_columns', 10, 2);
+add_action('manage_nbaplayer_posts_custom_column', 'fod_populate_player_columns', 10, 2);
+
+/* ------------------------------------------------------------------------
+   Edit Player Screen: FOD ID Meta Box
+------------------------------------------------------------------------ */
+function fod_add_player_id_metabox() {
+    $screens = ['playerdata', 'nbaplayer'];
+    foreach ($screens as $screen) {
+        add_meta_box(
+            'fod_player_id_box',
+            'Internal Unique ID',
+            'fod_render_player_id_metabox',
+            $screen,
+            'side',
+            'high'
+        );
+    }
+}
+add_action('add_meta_boxes', 'fod_add_player_id_metabox');
+
+function fod_render_player_id_metabox($post) {
+    $fod_id = get_post_meta($post->ID, 'fod_id', true);
+    echo '<p style="font-size: 1.2em; font-weight: bold; color: #0073aa; margin: 0;">' . esc_html($fod_id ?: 'Not Generated Yet') . '</p>';
+    echo '<p class="description">This ID is unique to this specific player record and is used for reliable CSV importing.</p>';
+}
+
+/**
+ * Display FOD ID prominently below the player name/title
+ */
+function fod_display_id_below_title() {
+    global $post;
+    if ( !is_object($post) || !in_array($post->post_type, ['playerdata', 'nbaplayer']) ) return;
+
+    $fod_id = get_post_meta($post->ID, 'fod_id', true);
+    if ( $fod_id ) {
+        echo '<div class="notice notice-info" style="margin: 10px 0; padding: 10px; border-left: 4px solid #0073aa; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">';
+        echo '<span style="font-weight: bold; color: #0073aa; text-transform: uppercase; font-size: 0.85em; display: block; margin-bottom: 2px;">Internal Unique ID</span>';
+        echo '<code style="font-size: 1.4em; font-weight: bold; background: none; border: none; padding: 0;">' . esc_html($fod_id) . '</code>';
+        echo '</div>';
+    }
+}
+add_action('edit_form_after_title', 'fod_display_id_below_title');

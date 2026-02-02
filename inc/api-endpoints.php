@@ -60,8 +60,82 @@ function fod_register_rest_routes() {
         'callback' => 'fod_bulk_update_dead_cap',
         'permission_callback' => '__return_true', // In production, add a secret key check
     ));
+
+    // 7. MLB Owner Map (For Stat Alerts)
+    register_rest_route( 'fod/v1', '/mlb-owner-map', array(
+        'methods'  => 'GET',
+        'callback' => 'fod_get_mlb_owner_map',
+        'permission_callback' => '__return_true',
+    ));
+
+    // 8. Slack Config (For External Bots)
+    register_rest_route( 'fod/v1', '/slack-config', array(
+        'methods'  => 'GET',
+        'callback' => 'fod_get_slack_config',
+        'permission_callback' => function() {
+            return current_user_can('manage_options'); // Secure: Admin only
+        },
+    ));
 }
 add_action( 'rest_api_init', 'fod_register_rest_routes' );
+
+/**
+ * Returns Slack Bot Tokens and Channel IDs for the monitor.
+ */
+function fod_get_slack_config() {
+    $configs = get_field('league_slack_channels', 'option');
+    $formatted = [];
+    
+    if (is_array($configs)) {
+        foreach ($configs as $row) {
+            $formatted[] = [
+                'league_id'  => $row['league_id'],
+                'bot_token'  => $row['bot_token'],
+                'channel_id' => $row['channel_id'],
+                'stat_alerts_channel_id' => $row['stat_alerts_channel_id'] ?? ''
+            ];
+        }
+    }
+    return rest_ensure_response($formatted);
+}
+
+/**
+ * Returns a JSON map of all rostered MLB players and their owners.
+ */
+function fod_get_mlb_owner_map() {
+    $args = [
+        'post_type'      => 'playerdata',
+        'posts_per_page' => -1,
+        'fields'         => 'ids',
+        'meta_query'     => [
+            'relation' => 'AND',
+            ['key' => 'fantasy_team_id', 'value' => '', 'compare' => '!='],
+            ['key' => 'fa_status', 'value' => 'rostered', 'compare' => '=']
+        ]
+    ];
+
+    $query = new WP_Query($args);
+    $map = [];
+
+    if ($query->have_posts()) {
+        foreach ($query->posts as $pid) {
+            $mlb_id = get_post_meta($pid, 'mlb_id', true);
+            $name   = get_the_title($pid);
+            
+            // If we don't have an MLB ID, we'll use the name as a fallback key
+            $key = !empty($mlb_id) ? $mlb_id : $name;
+
+            $map[$key] = [
+                'name'    => $name,
+                'team'    => get_post_meta($pid, 'fantasy_team_id', true),
+                'league'  => get_post_meta($pid, 'league_id', true),
+                'mlb_id'  => $mlb_id
+            ];
+        }
+    }
+    wp_reset_postdata();
+    return rest_ensure_response($map);
+}
 
 /**
  * Bulk update dead cap penalties for players.
@@ -172,7 +246,7 @@ function fod_get_remote_roster( $data ) {
             $pid = get_the_ID();
             
             $contracts = [];
-            foreach (range(2026, 2030) as $year) {
+            foreach (range(2026, 2040) as $year) {
                 $salary = get_post_meta($pid, 'contract_' . $year, true);
                 if ($salary) $contracts[$year] = $salary;
             }

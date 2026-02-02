@@ -197,7 +197,7 @@ function fod_submit_extension_request_handler() {
     // Determine Start Year
     // Find the first year that does NOT have a guaranteed (numeric) salary
     $start_year = 2026; 
-    $scan_limit = 2035;
+    $scan_limit = 2040;
     
     for ($y = 2026; $y <= $scan_limit; $y++) {
         $val = get_post_meta($player_id, 'contract_' . $y, true);
