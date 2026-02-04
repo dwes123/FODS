@@ -20,12 +20,12 @@ jobs:
           cp -r functions.php style.css inc JS acf-json deploy_folder/
 
       - name: Sync to Production Server
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
         with:
-          server: sftp.wp.com
           username: ${{ secrets.PROD_SFTP_USERNAME }}
           password: ${{ secrets.PROD_SFTP_PASSWORD }}
-          protocol: sftp
+          server: sftp.wp.com
           port: 22
-          local-dir: ./deploy_folder/
-          server-dir: htdocs/wp-content/themes/twentytwentytwo-child/
+          local_path: './deploy_folder/*'
+          remote_path: 'htdocs/wp-content/themes/twentytwentytwo-child/'
+          sftp_args: '-o StrictHostKeyChecking=no'
