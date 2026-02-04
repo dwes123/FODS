@@ -4,28 +4,30 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
 
+      - name: Prepare Theme Folder
+        run: |
+          mkdir deploy_folder
+          cp -r functions.php style.css inc JS acf-json deploy_folder/
+
       - name: Sync to Production Server
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-        with:
-          server: sftp.wp.com
-          username: ${{ secrets.PROD_SFTP_USERNAME }}
-          password: ${{ secrets.PROD_SFTP_PASSWORD }}
-          protocol: sftp
-          port: 22
-          local-dir: ./
-          server-dir: htdocs/wp-content/themes/twentytwentytwo-child/
-          exclude: |
-            **/.git*
-            **/.github**
-            **/Python/**
-            **/mobile_app/**
-            deploy_to_staging.ps1
-            README.md
+        uses: easingthemes/ssh-deploy@main
+        env:
+          SSH_PRIVATE_KEY: ''
+          ARGS: "-rlgoDzvc -i"
+          SOURCE: "deploy_folder/"
+          REMOTE_HOST: "sftp.wp.com"
+          REMOTE_USER: ${{ secrets.PROD_SFTP_USERNAME }}
+          REMOTE_PASSWORD: ${{ secrets.PROD_SFTP_PASSWORD }}
+          REMOTE_PORT: 22
+          TARGET: "htdocs/wp-content/themes/twentytwentytwo-child/"
+          EXCLUDE: "/.git/, /.github/"

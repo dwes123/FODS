@@ -12,7 +12,7 @@ CSV_FILE_PATH = r"C:\Users\Dan\Desktop\Front Office Dynasty Sports\Python\dead_c
 WORDPRESS_CONFIG = {
     'base_url': 'https://staging-9cb1-frontofficedynastysports.wpcomstaging.com',
     'username': 'djwes487',
-    'app_password': 'BEVM WcEq 9xZt KPHE w5EI bYta',
+    'app_password': 'YOUR_APP_PASSWORD_HERE',
 }
 # --- End WORDPRESS Configuration ---
 
