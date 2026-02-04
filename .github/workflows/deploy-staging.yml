@@ -19,12 +19,6 @@ jobs:
           cp -r functions.php style.css inc JS acf-json deploy_folder/
 
       - name: Sync to Staging Server
-        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
-        with:
-          username: ${{ secrets.STAGING_SFTP_USERNAME }}
-          password: ${{ secrets.STAGING_SFTP_PASSWORD }}
-          server: sftp.wp.com
-          port: 22
-          local_path: './deploy_folder/*'
-          remote_path: 'htdocs/wp-content/themes/twentytwentytwo-child/'
-          sftpArgs: '-o StrictHostKeyChecking=no'
+        run: |
+          sudo apt-get install -y lftp
+          lftp -c "set sftp:auto-confirm yes; open -u ${{ secrets.STAGING_SFTP_USERNAME }},${{ secrets.STAGING_SFTP_PASSWORD }} sftp://sftp.wp.com:22; mirror -R ./deploy_folder/ htdocs/wp-content/themes/twentytwentytwo-child/"
