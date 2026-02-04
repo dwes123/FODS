@@ -2742,7 +2742,7 @@ function display_all_transactions_shortcode() {
     // Basic filter to exclude minor roster moves
     $meta_query[] = [
         'key'     => 'transaction_type',
-        'value'   => ['Trade', 'Free Agent Signing', 'Waiver Claim', 'Draft Pick', 'Team Option'],
+        'value'   => ['Trade', 'Free Agent Signing', 'Waiver Claim', 'Draft Pick', 'Team Option', 'International Signing (ISBP)', 'Free Agent Signing (MiLB)'],
         'compare' => 'IN'
     ];
 
@@ -2816,8 +2816,9 @@ function display_all_transactions_shortcode() {
 
         while ( $transactions_query->have_posts() ) {
             $transactions_query->the_post();
-            $league_id = get_field( 'league_id' );
-            $summary   = get_field( 'transaction_summary' );
+            $post_id   = get_the_ID();
+            $league_id = get_post_meta( $post_id, 'league_id', true );
+            $summary   = get_field( 'transaction_summary', $post_id );
 
             echo '<tr>';
             echo '<td>' . get_the_date() . '</td>';

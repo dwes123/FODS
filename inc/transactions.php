@@ -65,7 +65,7 @@ function log_league_transaction( $args = [] ) {
 
     if ( $post_id && ! is_wp_error( $post_id ) ) {
         update_field( 'transaction_type', $args['transaction_type'], $post_id );
-        update_field( 'involved_players', $args['player_ids'], $post_id );
+        update_field( 'involved_player_s', $args['player_ids'], $post_id );
         update_field( 'primary_team', $args['primary_team'], $post_id );
         update_field( 'secondary_team', $args['secondary_team'], $post_id );
         update_field( 'transaction_summary', $args['summary'], $post_id );
@@ -148,8 +148,12 @@ add_action('admin_post_toggle_fantrax_processed', 'fod_handle_fantrax_toggle');
 /**
  * Helper to send messages to a Slack channel via Web API.
  * Supports unique Bot Tokens and Channels per League (Multi-Workspace).
+ * 
+ * @param string $message   The message text
+ * @param string $league_id The league (MLB, AAA, etc.)
+ * @param string $type      'trade_block' (default), 'completed_trade', or 'stat_alert'
  */
-function fod_send_slack_notification($message, $league_id = '') {
+function fod_send_slack_notification($message, $league_id = '', $type = 'trade_block') {
     $configs = get_field('league_slack_channels', 'option');
     
     if (!is_array($configs)) {
@@ -161,8 +165,17 @@ function fod_send_slack_notification($message, $league_id = '') {
 
     foreach ( $configs as $row ) {
         if ( strtoupper($row['league_id'] ?? '') === strtoupper($league_id) ) {
-            $bot_token  = $row['bot_token'] ?? '';
-            $channel_id = $row['channel_id'] ?? '';
+            $bot_token = $row['bot_token'] ?? '';
+            
+            // Determine Channel ID based on type
+            if ($type === 'completed_trade') {
+                $channel_id = $row['completed_trades_channel_id'] ?? '';
+            } elseif ($type === 'stat_alert') {
+                $channel_id = $row['stat_alerts_channel_id'] ?? '';
+            } else {
+                $channel_id = $row['channel_id'] ?? ''; // Default: Trade Block
+            }
+            
             break;
         }
     }

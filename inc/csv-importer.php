@@ -42,45 +42,60 @@ function fod_render_player_importer_page() {
                 $data = array_combine($headers, $row);
                 
                 $player_name = trim($data['name'] ?? '');
-                if ( empty($player_name) ) continue;
+                $fod_id      = trim($data['fod_id'] ?? '');
+                
+                if ( empty($player_name) && empty($fod_id) ) continue;
 
                 // Determine the target league for this row
-                // It should be in the CSV, usually 'league_id'
                 $target_league = trim($data['league_id'] ?? '');
 
-                // --- NEW LOGIC: Find player by Name AND League ---
                 $existing_player_id = 0;
-                
-                $args = [
-                    'post_type' => 'playerdata',
-                    'title'     => $player_name,
-                    'posts_per_page' => -1,
-                    'post_status' => 'publish',
-                    'fields' => 'ids' // Just get IDs for speed
-                ];
-                
-                // If we have a league, try to find a match in that league
-                if ( ! empty($target_league) ) {
-                    $args['meta_query'] = [
-                        [
-                            'key' => 'league_id',
-                            'value' => $target_league,
-                            'compare' => '='
-                        ]
+
+                // --- 1. TRY MATCHING BY FOD_ID (Highest Reliability) ---
+                if ( ! empty($fod_id) ) {
+                    $args = [
+                        'post_type' => ['playerdata', 'nbaplayer'],
+                        'meta_query' => [
+                            ['key' => 'fod_id', 'value' => $fod_id, 'compare' => '=']
+                        ],
+                        'posts_per_page' => 1,
+                        'fields' => 'ids'
                     ];
+                    $query_id = new WP_Query($args);
+                    if ( $query_id->have_posts() ) {
+                        $existing_player_id = $query_id->posts[0];
+                    }
                 }
 
-                $query = new WP_Query($args);
-                
-                if ( $query->have_posts() ) {
-                    // Found a match! Update this specific player.
-                    $existing_player_id = $query->posts[0];
+                // --- 2. FALLBACK: MATCH BY NAME AND LEAGUE ---
+                if ( ! $existing_player_id && ! empty($player_name) ) {
+                    $args = [
+                        'post_type' => ['playerdata', 'nbaplayer'],
+                        'title'     => $player_name,
+                        'posts_per_page' => 1,
+                        'post_status' => 'publish',
+                        'fields' => 'ids'
+                    ];
+                    
+                    if ( ! empty($target_league) ) {
+                        $args['meta_query'] = [
+                            ['key' => 'league_id', 'value' => $target_league, 'compare' => '=']
+                        ];
+                    }
+
+                    $query_name = new WP_Query($args);
+                    if ( $query_name->have_posts() ) {
+                        $existing_player_id = $query_name->posts[0];
+                    }
+                }
+
+                // --- 3. CREATE NEW IF NO MATCH FOUND ---
+                if ( $existing_player_id ) {
                     $updated_count++;
                 } else {
-                    // No match found in this league (or at all). Create NEW.
                     $post_args = [
-                        'post_title'  => $player_name,
-                        'post_type'   => 'playerdata',
+                        'post_title'  => $player_name ?: $fod_id,
+                        'post_type'   => (strpos($target_league, 'NBA') !== false) ? 'nbaplayer' : 'playerdata',
                         'post_status' => 'publish',
                     ];
                     $existing_player_id = wp_insert_post($post_args);

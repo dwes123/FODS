@@ -1,0 +1,32 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches:
+      - staging
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Sync to Staging Server
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: sftp.wp.com
+          username: ${{ secrets.STAGING_SFTP_USERNAME }}
+          password: ${{ secrets.STAGING_SFTP_PASSWORD }}
+          protocol: sftp
+          port: 22
+          local-dir: ./
+          server-dir: htdocs/wp-content/themes/twentytwentytwo-child/
+          # Exclude files that don't belong on the live site
+          exclude: |
+            **/.git*
+            **/.github**
+            **/Python/**
+            **/mobile_app/**
+            deploy_to_staging.ps1
+            README.md

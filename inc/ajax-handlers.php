@@ -575,6 +575,20 @@ function handle_accept_trade() {
         }
     }
 
+    // --- SLACK NOTIFICATION ---
+    if ( function_exists('fod_send_slack_notification') ) {
+        $slack_msg = "🚨 *TRADE ALERT!* 🚨\n\n";
+        $slack_msg .= "🤝 *To $proposer_team:* " . (empty($requested_names) ? 'No players' : implode(', ', $requested_names));
+        if ($isbp_requested > 0) $slack_msg .= " + $" . number_format($isbp_requested) . " ISBP";
+        
+        $slack_msg .= "\n\n";
+        
+        $slack_msg .= "🤝 *To $target_team:* " . (empty($offered_names) ? 'No players' : implode(', ', $offered_names));
+        if ($isbp_offered > 0) $slack_msg .= " + $" . number_format($isbp_offered) . " ISBP";
+
+        fod_send_slack_notification($slack_msg, $league_id, 'completed_trade');
+    }
+
     wp_redirect( add_query_arg('trade_action', 'accepted', $redirect_url) ); exit;
 }
 
