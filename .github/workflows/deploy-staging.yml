@@ -12,7 +12,18 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Sync to Staging Server (SFTP)
+      - name: Prepare Theme Folder (Remove non-theme files)
+        run: |
+          rm -rf .git
+          rm -rf .github
+          rm -rf Python
+          rm -rf mobile_app
+          rm -rf .idea
+          rm -rf ScreenShots
+          rm -f deploy_to_staging.ps1
+          rm -f README.md
+
+      - name: Sync to Staging Server
         uses: wlixcc/SFTP-Deploy-Action@v1.2.4
         with:
           username: ${{ secrets.STAGING_SFTP_USERNAME }}
@@ -21,15 +32,4 @@ jobs:
           port: 22
           local_path: './'
           remote_path: 'htdocs/wp-content/themes/twentytwentytwo-child/'
-          # Exclude non-theme files
-          args: '-o ConnectTimeout=5'
-          delete_remote_files: false
-          exclude: |
-            .git*
-            .github*
-            Python/
-            mobile_app/
-            deploy_to_staging.ps1
-            README.md
-            .idea/
-            ScreenShots/
+          sftp_only: true
