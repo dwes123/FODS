@@ -28,4 +28,4 @@ jobs:
           port: 22
           local_path: './deploy_folder/*'
           remote_path: 'htdocs/wp-content/themes/twentytwentytwo-child/'
-          sftp_args: '-o StrictHostKeyChecking=no'
+          sftpArgs: '-o StrictHostKeyChecking=no'
