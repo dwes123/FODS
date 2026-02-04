@@ -19,7 +19,7 @@ LEAGUE_ID_FOR_IMPORT = 'MLB'
 WORDPRESS_CONFIG = {
     'base_url': 'https://frontofficedynastysports.com',
     'username': 'djwes487',
-    'app_password': 'BEVM WcEq 9xZt KPHE w5EI bYta',
+    'app_password': 'YOUR_APP_PASSWORD_HERE',
     'player_cpt_slug': 'playerdata'
 }
 # --- End WordPress Details ---

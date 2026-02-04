@@ -11,7 +11,7 @@ from datetime import datetime
 # ==========================================
 SITE_URL = "https://frontofficedynastysports.com"
 USERNAME = "djwes487"
-APP_PASSWORD = "BEVM WcEq 9xZt KPHE w5EI bYta" 
+APP_PASSWORD = "YOUR_APP_PASSWORD_HERE" 
 
 # Local file to remember processed home runs across runs
 # Will be created in the same folder as the script
