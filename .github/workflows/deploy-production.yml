@@ -12,20 +12,23 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Sync to Production Server
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      - name: Sync to Production Server (SFTP)
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
         with:
-          server: sftp.wp.com
           username: ${{ secrets.PROD_SFTP_USERNAME }}
+          server: sftp.wp.com
           password: ${{ secrets.PROD_SFTP_PASSWORD }}
-          protocol: sftp
           port: 22
-          local-dir: ./
-          server-dir: htdocs/wp-content/themes/twentytwentytwo-child/
+          local_path: './'
+          remote_path: 'htdocs/wp-content/themes/twentytwentytwo-child/'
+          args: '-o ConnectTimeout=5'
+          delete_remote_files: false
           exclude: |
-            **/.git*
-            **/.github**
-            **/Python/**
-            **/mobile_app/**
+            .git*
+            .github*
+            Python/
+            mobile_app/
             deploy_to_staging.ps1
             README.md
+            .idea/
+            ScreenShots/
