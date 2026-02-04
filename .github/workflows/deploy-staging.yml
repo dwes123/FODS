@@ -19,14 +19,12 @@ jobs:
           cp -r functions.php style.css inc JS acf-json deploy_folder/
 
       - name: Sync to Staging Server
-        uses: easingthemes/ssh-deploy@main
-        env:
-          SSH_PRIVATE_KEY: '' # Leave blank if using password
-          ARGS: "-rlgoDzvc -i"
-          SOURCE: "deploy_folder/"
-          REMOTE_HOST: "sftp.wp.com"
-          REMOTE_USER: ${{ secrets.STAGING_SFTP_USERNAME }}
-          REMOTE_PASSWORD: ${{ secrets.STAGING_SFTP_PASSWORD }}
-          REMOTE_PORT: 22
-          TARGET: "htdocs/wp-content/themes/twentytwentytwo-child/"
-          EXCLUDE: "/.git/, /.github/"
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: sftp.wp.com
+          username: ${{ secrets.STAGING_SFTP_USERNAME }}
+          password: ${{ secrets.STAGING_SFTP_PASSWORD }}
+          protocol: sftp
+          port: 22
+          local-dir: ./deploy_folder/
+          server-dir: htdocs/wp-content/themes/twentytwentytwo-child/

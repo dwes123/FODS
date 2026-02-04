@@ -20,14 +20,12 @@ jobs:
           cp -r functions.php style.css inc JS acf-json deploy_folder/
 
       - name: Sync to Production Server
-        uses: easingthemes/ssh-deploy@main
-        env:
-          SSH_PRIVATE_KEY: ''
-          ARGS: "-rlgoDzvc -i"
-          SOURCE: "deploy_folder/"
-          REMOTE_HOST: "sftp.wp.com"
-          REMOTE_USER: ${{ secrets.PROD_SFTP_USERNAME }}
-          REMOTE_PASSWORD: ${{ secrets.PROD_SFTP_PASSWORD }}
-          REMOTE_PORT: 22
-          TARGET: "htdocs/wp-content/themes/twentytwentytwo-child/"
-          EXCLUDE: "/.git/, /.github/"
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: sftp.wp.com
+          username: ${{ secrets.PROD_SFTP_USERNAME }}
+          password: ${{ secrets.PROD_SFTP_PASSWORD }}
+          protocol: sftp
+          port: 22
+          local-dir: ./deploy_folder/
+          server-dir: htdocs/wp-content/themes/twentytwentytwo-child/
